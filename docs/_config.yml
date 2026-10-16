@@ -8,11 +8,10 @@
 title: "Hiding data in an LLM's word choices"
 description: "A compromised inference server can encode secrets in which token it emits. How much leaks, and what bounds it."
 
-# Set to the Pages URL once the org and repo exist, e.g.
-#   url: "https://<org>.github.io"
-#   baseurl: "/<repo>"
-url: ""
-baseurl: ""
+# Served as a GitHub Pages project site at <org>.github.io/<repo>/, so baseurl
+# must be the repo path or every absolute-root asset (the stylesheet, etc.) 404s.
+url: "https://weights-exfil.github.io"
+baseurl: "/model-weights-exfiltration"
 
 markdown: kramdown
 kramdown:

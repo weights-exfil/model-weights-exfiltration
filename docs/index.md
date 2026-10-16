@@ -22,7 +22,7 @@ affiliations:
 results_date: "August 2026"
 repo_url: "https://github.com/weights-exfil/model-weights-exfiltration"
 
-demo_embed_url: "https://weights-exfil-inference-verifier-demo.hf.space"
+demo_embed_url: "https://weights-exfil-inference-verifier-demo.static.hf.space"
 demo_standalone_url: "https://huggingface.co/spaces/weights-exfil/inference-verifier-demo"
 
 footer_note: "Apache-2.0 · to cite, see CITATION.cff or the companion paper (arXiv:2610.11843)."

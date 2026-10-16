@@ -6,8 +6,14 @@
 <title>{{ page.title }}</title>
 <meta name="description" content="{{ page.description }}">
 <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+<script>
+  /* Apply a saved theme before paint (no flash); with no saved choice the CSS
+     follows the OS via prefers-color-scheme. */
+  (function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 </head>
 <body>
+<button id="theme-toggle" type="button" aria-label="Switch between light and dark" title="Switch light / dark">◐</button>
 <div class="wrap">
 
   <header class="masthead col">
@@ -52,5 +58,21 @@
   </footer>
 
 </div>
+<script>
+  (function(){
+    var btn=document.getElementById('theme-toggle');
+    if(!btn)return;
+    var mq=window.matchMedia('(prefers-color-scheme: dark)');
+    function current(){
+      var set=document.documentElement.getAttribute('data-theme');
+      return set ? set : (mq.matches ? 'dark' : 'light');
+    }
+    btn.addEventListener('click',function(){
+      var next = current()==='dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try{localStorage.setItem('theme', next);}catch(e){}
+    });
+  })();
+</script>
 </body>
 </html>
