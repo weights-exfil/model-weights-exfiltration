@@ -30,28 +30,9 @@
     </div>
   </header>
 
-  <div class="col">
-    <p class="status">
-      <span>Results as of {{ page.results_date }}</span>
-      <span>·</span>
-      <span>The repository is the moving source of truth</span>
-      <span>·</span>
-      <span><a href="{{ page.repo_url }}">source &amp; data</a></span>
-    </p>
-  </div>
-
   <main class="col">
     {{ content }}
   </main>
-
-  <section class="col changelog">
-    <h2><span class="sec-no">Changelog</span>What changed, and when</h2>
-    <ul>
-      {% for entry in page.changelog %}
-      <li><time datetime="{{ entry.date }}">{{ entry.date }}</time><span>{{ entry.note }}</span></li>
-      {% endfor %}
-    </ul>
-  </section>
 
   <footer class="page col">
     <p>{{ page.footer_note }}</p>
