@@ -1,0 +1,167 @@
+# results.yml — the single place every published number lives.
+#
+# Updating the post when new results land = editing a row here. The post's
+# tables render from this file, so no number is hand-typed into prose twice.
+# Mirrors ../../NUMBERS.md; only rows marked publishable: true may render.
+#
+# regime:  bound   = trace construction, flip depths assigned freely (R-A)
+#          live    = real autoregressive generation, real token menu (R-B)
+#          served  = run inside the served vLLM pipeline (R-C)
+#          api     = measured against a live provider API
+# evidence: measured | modeled | derived | analytic
+
+capacity_ladder:
+  - id: P1
+    label: Raw decode ceiling
+    bits_per_token: "~2–4"
+    note: "log2 of the returned accepted set; ~3 at the rank-8 gate"
+    regime: analytic
+    evidence: analytic
+    verdict: null
+    publishable: true
+
+  - id: P2
+    label: After the per-token verifier
+    bits_per_token: "0.33"
+    note: "distribution-preserving encoder"
+    regime: bound
+    evidence: modeled
+    verdict: null
+    publishable: true
+
+  - id: A1
+    label: Free-depth construction (both secrets known)
+    bits_per_token: "0.013"
+    note: "AUC 0.49 — the conceded information-theoretic ceiling. A bound, not an achievement."
+    regime: bound
+    evidence: modeled
+    verdict: silent
+    publishable: true
+
+  - id: L1_L5
+    label: Live adaptive codecs (5 variants)
+    bits_per_token: "0.0024–0.008"
+    note: "limited to the real token menu"
+    regime: live
+    evidence: modeled
+    verdict: caught
+    publishable: true
+
+  # BLOCKED: README.md says ~0.47, findings.md says 0.647 for the same encoder,
+  # and 0.647 was reported against a 0.640 analytic ceiling. Do not render.
+  - id: P3
+    label: Rate-maximizing encoder
+    bits_per_token: "CONFLICT"
+    note: "0.47 vs 0.647 across two reports; 0.647-vs-0.640 is a bound violation"
+    regime: bound
+    evidence: modeled
+    verdict: null
+    publishable: false
+
+live_codecs:
+  - id: L1
+    attacker: rate-only
+    idea: "flip at the benign rate, emit the runner-up"
+    detector: MMD
+    verdict: caught
+    bits_per_token: "0.008"
+  - id: L2
+    attacker: distribution-matched
+    idea: "emit closest to a benign-sampled depth (no payload)"
+    detector: MMD
+    verdict: caught
+    bits_per_token: "—"
+  - id: L3
+    attacker: position-selective in-band
+    idea: "flip only where 2+ in-band candidates exist, encode by which"
+    detector: MMD
+    verdict: caught
+    bits_per_token: "0.0028"
+  - id: L4
+    attacker: shape-preserving
+    idea: "emit in proportion to the benign depth density"
+    detector: MMD
+    verdict: caught
+    bits_per_token: "0.0024"
+  - id: L5
+    attacker: depth-tie / which-token
+    idea: "encode by which of several same-depth candidates is emitted"
+    detector: MMD
+    verdict: caught
+    bits_per_token: "0.0029"
+
+attacker_knowledge:
+  - id: K0
+    knows: "nothing about the defense"
+    outcome: "caught, AUC 0.97–1.00"
+    verdict: caught
+  - id: K1
+    knows: "detectors + threshold, not the seed"
+    outcome: "caught; alarms in ~73 tokens, AUC 0.95"
+    verdict: caught
+  - id: K2
+    knows: "the seed, not the calibrated band"
+    outcome: "caught at ~1,368 tokens, AUC 0.58"
+    verdict: caught
+  - id: K3
+    knows: "both secrets, free choice of flip depth"
+    outcome: "evades at chance, AUC 0.49 — a construction"
+    verdict: silent
+  - id: K4
+    knows: "both secrets, real token menu"
+    outcome: "all five variants flagged by MMD"
+    verdict: caught
+  - id: K5
+    knows: "both secrets + workload control"
+    outcome: "silent by construction; residual grows 3.8x"
+    verdict: silent
+
+gaps:
+  - id: S1
+    name: Speculative decoding
+    finding: "honest deviation jumps ~1.0% -> ~22.7%; a stealthy attacker becomes indistinguishable (AUC ~0.51)"
+    stack: "vLLM 0.10.2 + EAGLE-3, Llama-3.1-8B"
+    evidence: measured
+    fix: "seed-faithful speculative decoding — keep the speedup, add the audit"
+  - id: K1_seed
+    name: Seed recovery
+    finding: "the shipped fixed, reused seed falls out of ordinary honest output in ~13 high-entropy tokens; cost grows only logarithmically in the candidate space"
+    stack: "Llama-3.2-3B, cloud L40, real vLLM-served tokens"
+    evidence: measured
+    fix: "per-request rotation + the design paper's own long keyed-seed guidance (App. E.5/E.6)"
+  - id: E1
+    name: Entropy shaping
+    finding: "steering the workload toward open-ended content grows the silent residual 0.068 -> 0.261 b/tok (3.8x) with all three detectors quiet"
+    stack: "bf16 3B"
+    evidence: modeled
+    fix: "a separate content/quality monitor — out of scope for the statistical layer"
+
+logprob_channel:
+  policy_ladder:
+    - policy: "top-20 returned"
+      channel: "~360 bits/token"
+    - policy: "top-5 returned"
+      channel: "~90 bits/token"
+    - policy: "top-1 returned"
+      channel: "~18 bits/token"
+    - policy: "none returned"
+      channel: "0 — closed"
+  measured:
+    id: G1
+    value: "~360 bits/token, decoded bit-exact"
+    setup: "gpt-4o-mini, top_logprobs=20, temperature 0, fixed seed, 30 trials; m=19 fails as slots fall below the fp32 ulp"
+    evidence: measured
+  jitter_band: "median 0.32, max 0.51 nats over 30 identical calls"
+  # perishable — re-measure before publishing
+  provider_surface_measured: "2026-07 / 2026-08"
+
+demo:
+  model: meta-llama/Llama-3.2-3B-Instruct
+  gpu: NVIDIA H100 NVL
+  seed: 7
+  temperature: 0.7
+  top_k: 50
+  top_p: 0.95
+  calibration: "real cross-hardware honest traces, n=1,488,705"
+  alarm_threshold: 4.6052
+  detector_shown: "seed-flip e-process only — MMD is NOT plotted"

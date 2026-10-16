@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title }}</title>
+<meta name="description" content="{{ page.description }}">
+<link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead col">
+    <p class="eyebrow">{{ page.eyebrow }}</p>
+    <h1>{{ page.title }}</h1>
+    <p class="standfirst">{{ page.standfirst }}</p>
+    <div class="byline">
+      <p class="authors">
+        {% for author in page.authors %}<span class="author">{{ author.name }}<sup>{% for i in author.affiliations %}{{ i }}{% unless forloop.last %},{% endunless %}{% endfor %}</sup></span>{% unless forloop.last %}<span class="sep">·</span>{% endunless %}{% endfor %}
+      </p>
+      <p class="affils">
+        {% for affil in page.affiliations %}<span class="affil"><sup>{{ forloop.index }}</sup>{{ affil }}</span>{% endfor %}
+      </p>
+    </div>
+  </header>
+
+  <div class="col">
+    <p class="status">
+      <span>Results as of {{ page.results_date }}</span>
+      <span>·</span>
+      <span>The repository is the moving source of truth</span>
+      <span>·</span>
+      <span><a href="{{ page.repo_url }}">source &amp; data</a></span>
+    </p>
+  </div>
+
+  <main class="col">
+    {{ content }}
+  </main>
+
+  <section class="col changelog">
+    <h2><span class="sec-no">Changelog</span>What changed, and when</h2>
+    <ul>
+      {% for entry in page.changelog %}
+      <li><time datetime="{{ entry.date }}">{{ entry.date }}</time><span>{{ entry.note }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <footer class="page col">
+    <p>{{ page.footer_note }}</p>
+  </footer>
+
+</div>
+</body>
+</html>

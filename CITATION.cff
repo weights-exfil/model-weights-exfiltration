@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite the companion paper (preferred-citation below)."
+title: "How leaky is your inference API? Detecting model weight steganographic exfiltration"
+abstract: >-
+  A write-up and interactive demo of a covert channel in an LLM inference API:
+  a compromised server hides model-weight bits in which tokens it emits, and a
+  colluding client decodes them from the returned logprobs. Inference
+  verification with an anytime-valid (e-process) aggregate detector catches it.
+type: software
+authors:
+  - family-names: Kowalczyk
+    given-names: Mateusz
+    affiliation: "NASK National Research Institute; MATS Research"
+  - family-names: Ortega-Fernández
+    given-names: Inés
+    affiliation: "MATS Research"
+  - family-names: Warr
+    given-names: Keri
+    affiliation: "Anthropic"
+date-released: 2026-10-16
+license: Apache-2.0
+url: "https://weights-exfil.github.io/model-weights-exfiltration/"
+repository-code: "https://github.com/weights-exfil/model-weights-exfiltration"
+keywords:
+  - inference verification
+  - steganography
+  - covert channel
+  - model weight exfiltration
+  - anytime-valid testing
+preferred-citation:
+  type: article
+  title: "Anytime-valid detection of LLM weight exfiltration"
+  authors:
+    - family-names: Ortega-Fernández
+      given-names: Inés
+    - family-names: Kowalczyk
+      given-names: Mateusz
+    - family-names: Warr
+      given-names: Keri
+  year: 2026
+  journal: "arXiv preprint"
+  notes: "arXiv:2610.11843"
+  url: "https://arxiv.org/abs/2610.11843"

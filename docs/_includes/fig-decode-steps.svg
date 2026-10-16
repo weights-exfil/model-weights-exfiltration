@@ -1,0 +1,128 @@
+<svg viewBox="0 0 720 346" role="img"
+     aria-label="Decoding example using the top-20 logprobs the API returns. The API returns the top-20 token probabilities at every step regardless of certainty, and both sides apply the same top-p equals 0.95 cutoff, so the acceptable set is identical on both ends. Numbers are illustrative. Step 1 is drawn in full, after and the: sky 0.35, light 0.27, air 0.20 and world 0.13 sum to 0.95 and are the four acceptable tokens; below a dashed cutoff line, sixteen more tokens are still returned by the API but fall below the cutoff and are unused; the four acceptable tokens carry two bits, and the emitted word light is second, giving 01. The remaining steps show only their acceptable set. Step 2: faded 0.31, came 0.27, returned 0.21 and spilled 0.16, four acceptable tokens; two bits, emitted returned is third, giving 10. Step 3: at 0.96 is above the cutoff on its own, one acceptable token, so the step carries nothing. Step 4: dawn 0.38, morning 0.24, sunrise 0.19 and daybreak 0.14, four acceptable tokens; two bits, emitted morning is second, giving 01. Recovered: 01, 10, nothing, 01, which is 011001."
+     style="width:100%;height:auto;display:block;font-family:var(--font-ui);">
+
+  <!-- Decoding worked example. THE ONE IDEA: the acceptable set is computable, not
+       guessed. The API returns the top-20 probabilities at EVERY step regardless of
+       certainty (measured gpt-4o + gemini-2.5-pro, 2026-08: always 20 even at p=1.0;
+       "capital of France" returned 19 of 20 below 5%). prob = exp(logprob), so the
+       client applies the same top-p=0.95 cutoff the server sampled under.
+
+       Legend is visual (swatches), not prose. Step 1 is drawn in full to TEACH the
+       top-20-vs-acceptable split once: acceptable row, dashed cutoff line, faint tail
+       for the ~16 returned-but-below tokens (generic pills, NOT invented words).
+       Steps 2-4 show only the acceptable set (each keeps one faint below-cutoff chip).
+
+       Probabilities illustrative -- each acceptable set is a genuine minimal top-p=0.95
+       nucleus. Grid: chips x 64 (w 68, gap 6, ends 432) · notes x 446. -->
+
+  <text x="16" y="22" font-size="12.5" font-weight="700" letter-spacing="0.04em"
+        fill="var(--accent-ink)">Decoding example — top-20 logprobs</text>
+
+  <!-- visual legend -->
+  <rect x="16"  y="40" width="22" height="13" rx="3" fill="var(--accent)"/>
+  <text x="44"  y="50" font-size="10.5" fill="var(--muted)">emitted</text>
+  <rect x="108" y="40" width="22" height="13" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="136" y="50" font-size="10.5" fill="var(--muted)">acceptable</text>
+  <rect x="212" y="40" width="22" height="13" rx="3" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="240" y="50" font-size="10.5" fill="var(--muted)">below cutoff</text>
+  <text x="330" y="50" font-size="10.5" fill="var(--muted)">· illustrative numbers</text>
+
+  <!-- ── step 1 · drawn in full: the top-20 the API returns, and the acceptable slice ── -->
+  <text x="16" y="90" font-size="11" fill="var(--muted)">1</text>
+  <rect x="64"  y="72" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="98"  y="88" text-anchor="middle" font-size="11.5" fill="var(--ink)">sky</text>
+  <text x="98"  y="100" text-anchor="middle" font-size="10" fill="var(--muted)">.35</text>
+  <rect x="138" y="72" width="68" height="32" rx="4" fill="var(--accent)"/>
+  <text x="172" y="88" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--surface)">light</text>
+  <text x="172" y="100" text-anchor="middle" font-size="10" fill="var(--surface)">.27</text>
+  <rect x="212" y="72" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="246" y="88" text-anchor="middle" font-size="11.5" fill="var(--ink)">air</text>
+  <text x="246" y="100" text-anchor="middle" font-size="10" fill="var(--muted)">.20</text>
+  <rect x="286" y="72" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="320" y="88" text-anchor="middle" font-size="11.5" fill="var(--ink)">world</text>
+  <text x="320" y="100" text-anchor="middle" font-size="10" fill="var(--muted)">.13</text>
+  <text x="446" y="86" font-size="11" fill="var(--muted)">4 acceptable tokens</text>
+  <text x="446" y="104" font-size="12.5" fill="var(--ink)">2 bits · 2nd →
+    <tspan font-family="var(--font-mono)" font-weight="700" fill="var(--accent-ink)">01</tspan></text>
+
+  <!-- cutoff line + the rest of the returned top-20, below it (extra gap above the line) -->
+  <line x1="64" y1="126" x2="428" y2="126" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="428" y="122" text-anchor="end" font-size="9.5" fill="var(--muted)">top-p = 0.95 cutoff</text>
+  <g fill="var(--surface-sunk)" stroke="var(--rule)">
+    <rect x="64"  y="133" width="30" height="15" rx="3"/>
+    <rect x="100" y="133" width="30" height="15" rx="3"/>
+    <rect x="136" y="133" width="30" height="15" rx="3"/>
+    <rect x="172" y="133" width="30" height="15" rx="3"/>
+  </g>
+  <text x="212" y="145" font-size="11" fill="var(--muted)">…</text>
+  <text x="232" y="145" font-size="10.5" fill="var(--muted)">16 more unused tokens below the threshold cutoff</text>
+
+  <!-- ── step 2 ─────────────────────────────────────────────────────────── -->
+  <text x="16" y="182" font-size="11" fill="var(--muted)">2</text>
+  <rect x="64"  y="164" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="98"  y="180" text-anchor="middle" font-size="11.5" fill="var(--ink)">faded</text>
+  <text x="98"  y="192" text-anchor="middle" font-size="10" fill="var(--muted)">.31</text>
+  <rect x="138" y="164" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="172" y="180" text-anchor="middle" font-size="11.5" fill="var(--ink)">came</text>
+  <text x="172" y="192" text-anchor="middle" font-size="10" fill="var(--muted)">.27</text>
+  <rect x="212" y="164" width="68" height="32" rx="4" fill="var(--accent)"/>
+  <text x="246" y="180" text-anchor="middle" font-size="11" font-weight="700" fill="var(--surface)">returned</text>
+  <text x="246" y="192" text-anchor="middle" font-size="10" fill="var(--surface)">.21</text>
+  <rect x="286" y="164" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="320" y="180" text-anchor="middle" font-size="11.5" fill="var(--ink)">spilled</text>
+  <text x="320" y="192" text-anchor="middle" font-size="10" fill="var(--muted)">.16</text>
+  <rect x="360" y="164" width="68" height="32" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="394" y="180" text-anchor="middle" font-size="11.5" fill="var(--muted)">shifted</text>
+  <text x="394" y="192" text-anchor="middle" font-size="10" fill="var(--muted)">.05</text>
+  <text x="446" y="178" font-size="11" fill="var(--muted)">4 acceptable tokens</text>
+  <text x="446" y="196" font-size="12.5" fill="var(--ink)">2 bits · 3rd →
+    <tspan font-family="var(--font-mono)" font-weight="700" fill="var(--accent-ink)">10</tspan></text>
+
+  <!-- ── step 3 · one acceptable token, so nothing is carried ───────────── -->
+  <text x="16" y="236" font-size="11" fill="var(--muted)">3</text>
+  <rect x="64"  y="218" width="68" height="32" rx="4" fill="var(--accent)"/>
+  <text x="98"  y="234" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--surface)">at</text>
+  <text x="98"  y="246" text-anchor="middle" font-size="10" fill="var(--surface)">.96</text>
+  <rect x="138" y="218" width="68" height="32" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="172" y="234" text-anchor="middle" font-size="11.5" fill="var(--muted)">to</text>
+  <text x="172" y="246" text-anchor="middle" font-size="10" fill="var(--muted)">.01</text>
+  <rect x="212" y="218" width="68" height="32" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="246" y="234" text-anchor="middle" font-size="11.5" fill="var(--muted)">in</text>
+  <text x="246" y="246" text-anchor="middle" font-size="10" fill="var(--muted)">.01</text>
+  <rect x="286" y="218" width="68" height="32" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="320" y="234" text-anchor="middle" font-size="11.5" fill="var(--muted)">over</text>
+  <text x="320" y="246" text-anchor="middle" font-size="10" fill="var(--muted)">.01</text>
+  <rect x="360" y="218" width="68" height="32" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="394" y="234" text-anchor="middle" font-size="11.5" fill="var(--muted)">on</text>
+  <text x="394" y="246" text-anchor="middle" font-size="10" fill="var(--muted)">.01</text>
+  <text x="446" y="232" font-size="11" fill="var(--muted)">1 acceptable token</text>
+  <text x="446" y="250" font-size="12.5" fill="var(--ink)">0 bits · nothing to carry</text>
+
+  <!-- ── step 4 · the same step fig-codec draws in detail ───────────────── -->
+  <text x="16" y="290" font-size="11" fill="var(--muted)">4</text>
+  <rect x="64"  y="272" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="98"  y="288" text-anchor="middle" font-size="11.5" fill="var(--ink)">dawn</text>
+  <text x="98"  y="300" text-anchor="middle" font-size="10" fill="var(--muted)">.38</text>
+  <rect x="138" y="272" width="68" height="32" rx="4" fill="var(--accent)"/>
+  <text x="172" y="288" text-anchor="middle" font-size="11" font-weight="700" fill="var(--surface)">morning</text>
+  <text x="172" y="300" text-anchor="middle" font-size="10" fill="var(--surface)">.24</text>
+  <rect x="212" y="272" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="246" y="288" text-anchor="middle" font-size="11.5" fill="var(--ink)">sunrise</text>
+  <text x="246" y="300" text-anchor="middle" font-size="10" fill="var(--muted)">.19</text>
+  <rect x="286" y="272" width="68" height="32" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+  <text x="320" y="288" text-anchor="middle" font-size="11" fill="var(--ink)">daybreak</text>
+  <text x="320" y="300" text-anchor="middle" font-size="10" fill="var(--muted)">.14</text>
+  <rect x="360" y="272" width="68" height="32" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="394" y="288" text-anchor="middle" font-size="11.5" fill="var(--muted)">noon</text>
+  <text x="394" y="300" text-anchor="middle" font-size="10" fill="var(--muted)">.04</text>
+  <text x="446" y="286" font-size="11" fill="var(--muted)">4 acceptable tokens</text>
+  <text x="446" y="304" font-size="12.5" fill="var(--ink)">2 bits · 2nd →
+    <tspan font-family="var(--font-mono)" font-weight="700" fill="var(--accent-ink)">01</tspan></text>
+
+  <!-- ── what the client ends up holding ────────────────────────────────── -->
+  <rect x="16" y="312" width="688" height="28" rx="6"
+        fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="30" y="330" font-size="11.5" fill="var(--muted)">Recovered</text>
+  <text x="110" y="330" font-size="13" font-family="var(--font-mono)" fill="var(--ink)">01<tspan fill="var(--muted)"> · </tspan>10<tspan fill="var(--muted)"> · </tspan>—<tspan fill="var(--muted)"> · </tspan>01<tspan fill="var(--muted)">  =  </tspan><tspan font-weight="700" fill="var(--accent-ink)">011001</tspan></text>
+</svg>

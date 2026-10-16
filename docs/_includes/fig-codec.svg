@@ -1,0 +1,155 @@
+<svg viewBox="0 0 720 412" role="img"
+     aria-label="Encode and decode, side by side, as inverse operations. On the left, the secret is a stream of bits. At one step the model offers six plausible next words with their probabilities: dawn 38 percent, morning 24, sunrise 19, daybreak 14, noon 4, and banana at 0.01 percent. The top four carry two-bit codes 00, 01, 10 and 11. Noon and banana are bracketed together as easily detectable, so the encoder cannot use them. The next two bits of the secret are 0 and 1, so the server emits morning. On the right, decoding starts from that same token. The API response lists the token morning, its logprob, and the top logprobs for dawn, morning, sunrise and daybreak. Only four tokens can carry bits, so each step moves two. Morning is the second of those four, which recovers the bits 01. The server and the client build that same ordered list of four the same way, from what the API returns. Along the bottom, the reply that goes back reads like ordinary text: nothing in it looks wrong."
+     style="width:100%;height:auto;display:block;font-family:var(--font-ui);">
+
+  <!-- Two columns, one shared artefact. The left column packs bits into a word
+       choice; the right column reads them back out of the API response; the
+       strip along the bottom is the reply itself, which both columns are about.
+       Grid: left panel x 16–462, right panel x 486–704, both y 108–356. -->
+
+  <defs>
+    <marker id="cdc-down" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+    </marker>
+  </defs>
+
+  <text x="16"  y="26" font-size="12" font-weight="700" letter-spacing="0.1em"
+        fill="var(--accent-ink)">ENCODE</text>
+  <text x="486" y="26" font-size="12" font-weight="700" letter-spacing="0.1em"
+        fill="var(--accent-ink)">DECODE</text>
+
+  <!-- ═══ left: the secret, as a bit tape ═══════════════════════════════════ -->
+  <text x="16" y="46" font-size="11" fill="var(--muted)">The secret (e.g. model weights) as bits</text>
+
+  <g font-family="var(--font-mono)" font-size="13">
+    <rect x="16"  y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="29"  y="72" text-anchor="middle" fill="var(--muted)">0</text>
+    <rect x="48"  y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="61"  y="72" text-anchor="middle" fill="var(--muted)">1</text>
+    <rect x="80"  y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="93"  y="72" text-anchor="middle" fill="var(--muted)">1</text>
+    <rect x="112" y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="125" y="72" text-anchor="middle" fill="var(--muted)">0</text>
+
+    <!-- the two bits spent at this step -->
+    <rect x="144" y="54" width="26" height="26" rx="4" fill="var(--accent)"/>
+    <text x="157" y="72" text-anchor="middle" fill="var(--surface)" font-weight="700">0</text>
+    <rect x="176" y="54" width="26" height="26" rx="4" fill="var(--accent)"/>
+    <text x="189" y="72" text-anchor="middle" fill="var(--surface)" font-weight="700">1</text>
+
+    <!-- queued: de-emphasised by ink weight, never by opacity -->
+    <g fill="var(--muted)">
+      <rect x="208" y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+      <text x="221" y="72" text-anchor="middle">0</text>
+      <rect x="240" y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+      <text x="253" y="72" text-anchor="middle">0</text>
+      <rect x="272" y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+      <text x="285" y="72" text-anchor="middle">1</text>
+      <rect x="304" y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+      <text x="317" y="72" text-anchor="middle">1</text>
+      <rect x="336" y="54" width="26" height="26" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+      <text x="349" y="72" text-anchor="middle">0</text>
+    </g>
+  </g>
+
+  <line x1="173" y1="86" x2="173" y2="102" stroke="var(--accent)" stroke-width="2.5"
+        marker-end="url(#cdc-down)"/>
+
+  <!-- ═══ right: the token that came out, which decode starts from ══════════
+       This mirrors the bit tape opposite. Without it the DECODE heading sat
+       alone above 80px of empty ground and read as a smaller word than ENCODE,
+       though both are 12px/700. It also makes the two columns legible as
+       inverse operations: bits in on the left, bits out on the right. -->
+  <text x="486" y="46" font-size="11" fill="var(--muted)">Returned token</text>
+  <rect x="486" y="54" width="96" height="26" rx="4" fill="var(--accent)"/>
+  <text x="534" y="72" text-anchor="middle" font-size="13" font-weight="700"
+        fill="var(--surface)">morning</text>
+  <line x1="534" y1="86" x2="534" y2="102" stroke="var(--accent)" stroke-width="2.5"
+        marker-end="url(#cdc-down)"/>
+
+  <!-- ═══ left: the model's menu of plausible next words ════════════════════ -->
+  <rect x="16" y="108" width="446" height="248" rx="6"
+        fill="var(--surface)" stroke="var(--rule)"/>
+
+  <text x="32" y="132" font-size="13" font-style="italic" fill="var(--ink-soft)">“…and the light returned at ___”</text>
+
+  <g font-size="13">
+    <text x="32" y="167" fill="var(--ink)">“dawn”</text>
+    <rect x="132" y="156" width="150" height="14" rx="2" fill="var(--rule)"/>
+    <text x="292" y="167" font-size="11.5" fill="var(--muted)">38%</text>
+    <rect x="372" y="154" width="34" height="18" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="389" y="167" text-anchor="middle" font-family="var(--font-mono)" font-size="11.5" fill="var(--muted)">00</text>
+
+    <!-- the row the two live bits select -->
+    <rect x="24" y="180" width="430" height="26" rx="4" fill="var(--accent-soft)"/>
+    <text x="32" y="198" font-weight="700" fill="var(--accent-ink)">“morning”</text>
+    <rect x="132" y="186" width="95" height="14" rx="2" fill="var(--accent)"/>
+    <text x="237" y="198" font-size="11.5" fill="var(--muted)">24%</text>
+    <rect x="372" y="184" width="34" height="18" rx="4" fill="var(--accent)"/>
+    <text x="389" y="197" text-anchor="middle" font-family="var(--font-mono)" font-size="11.5"
+          font-weight="700" fill="var(--surface)">01</text>
+
+    <text x="32" y="228" fill="var(--ink)">“sunrise”</text>
+    <rect x="132" y="217" width="75" height="14" rx="2" fill="var(--rule)"/>
+    <text x="217" y="228" font-size="11.5" fill="var(--muted)">19%</text>
+    <rect x="372" y="215" width="34" height="18" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="389" y="228" text-anchor="middle" font-family="var(--font-mono)" font-size="11.5" fill="var(--muted)">10</text>
+
+    <text x="32" y="258" fill="var(--ink)">“daybreak”</text>
+    <rect x="132" y="247" width="55" height="14" rx="2" fill="var(--rule)"/>
+    <text x="197" y="258" font-size="11.5" fill="var(--muted)">14%</text>
+    <rect x="372" y="245" width="34" height="18" rx="4" fill="var(--surface-sunk)" stroke="var(--rule)"/>
+    <text x="389" y="258" text-anchor="middle" font-family="var(--font-mono)" font-size="11.5" fill="var(--muted)">11</text>
+
+    <!-- the two the encoder cannot reach: real English, but far enough down
+         the distribution that choosing one is itself the tell -->
+    <text x="32" y="288" fill="var(--muted)">“noon”</text>
+    <rect x="132" y="277" width="16" height="14" rx="2" fill="var(--rule)"/>
+    <text x="158" y="288" font-size="11.5" fill="var(--muted)">4%</text>
+
+    <text x="32" y="318" fill="var(--muted)">“banana”</text>
+    <rect x="132" y="307" width="3" height="14" rx="1" fill="var(--rule)"/>
+    <text x="145" y="318" font-size="11.5" fill="var(--muted)">0.01%</text>
+  </g>
+
+  <!-- brace grouping the two unusable rows, replacing a sentence -->
+  <path d="M 372 274 q 5 0 5 5 L 377 296 q 0 5 5 5 q -5 0 -5 5 L 377 317 q 0 5 -5 5"
+        fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="392" y="297" font-size="11" fill="var(--muted)">easily</text>
+  <text x="392" y="310" font-size="11" fill="var(--muted)">detectable</text>
+
+  <!-- ═══ right: the response the client reads back ═════════════════════════ -->
+  <rect x="486" y="108" width="218" height="248" rx="6"
+        fill="var(--surface)" stroke="var(--rule)"/>
+
+  <text x="498" y="132" font-size="11" fill="var(--muted)">API response</text>
+
+  <!-- the line the client is looking for -->
+  <rect x="490" y="204" width="210" height="16" rx="3" fill="var(--accent-soft)"/>
+
+  <g font-family="var(--font-mono)" font-size="10.5" fill="var(--ink)">
+    <text x="498" y="156"><tspan fill="var(--muted)">"token": </tspan><tspan fill="var(--accent-ink)" font-weight="700">"morning"</tspan></text>
+    <text x="498" y="172" fill="var(--muted)">"logprob": -1.39</text>
+    <text x="498" y="188" fill="var(--muted)">"top_logprobs": [</text>
+    <text x="498" y="204">  {"dawn",     -0.92}</text>
+    <text x="498" y="217" fill="var(--accent-ink)" font-weight="700">  {"morning",  -1.39}</text>
+    <text x="498" y="233">  {"sunrise",  -1.61}</text>
+    <text x="498" y="249">  {"daybreak", -1.90}</text>
+    <text x="498" y="265" fill="var(--muted)">  ... ]</text>
+  </g>
+
+  <line x1="498" y1="284" x2="692" y2="284" stroke="var(--rule)" stroke-width="1"/>
+
+  <text x="498" y="304" font-size="12" fill="var(--ink)">Only 4 tokens can carry bits.</text>
+  <text x="498" y="326" font-size="12" fill="var(--ink)">“morning” is the 2nd →
+    <tspan font-family="var(--font-mono)" font-weight="700" fill="var(--accent-ink)">01</tspan></text>
+  <text x="498" y="346" font-size="10.5" fill="var(--muted)">both sides build this list the same way</text>
+
+  <!-- ═══ the reply itself: what both columns are about ═════════════════════ -->
+  <rect x="16" y="368" width="688" height="34" rx="6"
+        fill="var(--surface-sunk)" stroke="var(--rule)"/>
+  <text x="32" y="390" font-size="11.5" fill="var(--muted)">Reply looks natural</text>
+  <text x="228" y="390" font-size="13" fill="var(--ink)">…and the light returned at
+    <tspan font-weight="700" fill="var(--accent-ink)">morning</tspan>.</text>
+</svg>

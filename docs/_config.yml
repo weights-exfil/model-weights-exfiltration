@@ -1,0 +1,32 @@
+# GitHub Pages / Jekyll config.
+#
+# Deliberately theme-less: `theme:` is unset, so Jekyll uses our own
+# _layouts/default.html and assets/css/style.css instead of importing
+# minima's markup and typography. Removing this comment and adding a theme
+# would silently override the page design.
+
+title: "Hiding data in an LLM's word choices"
+description: "A compromised inference server can encode secrets in which token it emits. How much leaks, and what bounds it."
+
+# Set to the Pages URL once the org and repo exist, e.g.
+#   url: "https://<org>.github.io"
+#   baseurl: "/<repo>"
+url: ""
+baseurl: ""
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# The recorded demo is a static bundle copied in at docs/demo/. Jekyll must
+# not try to process it — it is pre-built HTML + JSON traces.
+keep_files:
+  - demo
+
+exclude:
+  - README.md
+
+plugins:
+  - jekyll-sitemap

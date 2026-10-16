@@ -1,0 +1,77 @@
+<svg viewBox="0 0 720 250" role="img"
+     aria-label="A compromised inference server holding model weights. Four routes lead out of it. Opening an outbound connection, writing to shared storage, and burying data in logs or telemetry are all blocked. The fourth, answering the customer, stays open because it is the product, and the weight bits leave along it to a colluding client."
+     style="width:100%;height:auto;display:block;font-family:var(--font-ui);">
+
+  <!-- Geometry is on a fixed grid so the three blocked lanes are identical:
+         lane baselines   y = 62 · 110 · 158 · 212   (the open lane is the third)
+         every lane starts at   x = 200
+         blocked lanes stop at  x = 386, and their ✕ is centred on x = 400
+       Nothing is eyeballed; if a lane moves, move it on this grid. -->
+
+  <defs>
+    <marker id="ar-open" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+    </marker>
+    <marker id="ar-shut" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rule)"/>
+    </marker>
+  </defs>
+
+  <!-- ── the compromised server, weights visible inside ─────────────────── -->
+  <rect x="16" y="52" width="176" height="152" rx="6"
+        fill="var(--surface)" stroke="var(--caught)" stroke-width="2"/>
+
+  <!-- weight-stack icon: three slabs -->
+  <g fill="var(--silent-mark)">
+    <rect x="74" y="74"  width="60" height="12" rx="2"/>
+    <rect x="74" y="91"  width="60" height="12" rx="2"/>
+    <rect x="74" y="108" width="60" height="12" rx="2"/>
+  </g>
+  <!-- text-safe amber, NOT --silent-mark: #eda100 as text is 2.17:1 on white -->
+  <text x="104" y="140" text-anchor="middle" font-size="12" fill="var(--silent)">model weights</text>
+
+  <text x="104" y="166" text-anchor="middle" font-size="14" font-weight="650"
+        fill="var(--caught-ink)">Inference server</text>
+  <rect x="44" y="176" width="120" height="22" rx="11"
+        fill="var(--caught-soft)" stroke="var(--caught)" stroke-width="1"/>
+  <text x="104" y="191" text-anchor="middle" font-size="10.5" font-weight="700"
+        letter-spacing="0.08em" fill="var(--caught-ink)">COMPROMISED</text>
+
+  <!-- ── three routes that are closed ───────────────────────────────────── -->
+  <!-- All four lanes are arrows, because all four are routes an attacker would
+       try. Keeping the mark type identical means the ONE difference the reader
+       has to see is blocked-versus-open, not arrow-versus-line. Each blocked
+       arrow ends at x = 380 (tip ~386), leaving a clear gap before its ✕,
+       and all three ✕ share x = 400. -->
+  <g stroke="var(--rule)" stroke-width="2">
+    <line x1="200" y1="62"  x2="380" y2="62"  marker-end="url(#ar-shut)"/>
+    <line x1="200" y1="110" x2="380" y2="110" marker-end="url(#ar-shut)"/>
+    <line x1="200" y1="212" x2="380" y2="212" marker-end="url(#ar-shut)"/>
+  </g>
+  <g stroke="var(--caught)" stroke-width="2.5" stroke-linecap="round">
+    <line x1="393" y1="55"  x2="407" y2="69"/><line x1="407" y1="55"  x2="393" y2="69"/>
+    <line x1="393" y1="103" x2="407" y2="117"/><line x1="407" y1="103" x2="393" y2="117"/>
+    <line x1="393" y1="205" x2="407" y2="219"/><line x1="407" y1="205" x2="393" y2="219"/>
+  </g>
+  <text x="200" y="50"  font-size="12" fill="var(--muted)">open an outbound connection</text>
+  <text x="200" y="98"  font-size="12" fill="var(--muted)">write it to shared storage</text>
+  <text x="200" y="200" font-size="12" fill="var(--muted)">bury it in the logs or telemetry</text>
+
+  <!-- ── the route that cannot be closed ────────────────────────────────── -->
+  <text x="200" y="146" font-size="12.5" font-weight="650"
+        fill="var(--accent-ink)">answer the customer</text>
+  <line x1="200" y1="158" x2="500" y2="158" stroke="var(--accent)" stroke-width="3"
+        marker-end="url(#ar-open)"/>
+  <text x="350" y="176" text-anchor="middle" font-size="10.5" font-family="var(--font-mono)"
+        fill="var(--accent-ink)" letter-spacing="0.05em">1 0 1 1 0 1 0 0</text>
+
+  <!-- ── the client ─────────────────────────────────────────────────────── -->
+  <rect x="512" y="128" width="192" height="60" rx="6"
+        fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+  <text x="608" y="152" text-anchor="middle" font-size="13" font-weight="650"
+        fill="var(--ink)">Colluding client</text>
+  <text x="608" y="170" text-anchor="middle" font-size="11.5"
+        fill="var(--muted)">decodes the weight bits</text>
+</svg>

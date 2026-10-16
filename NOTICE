@@ -1,0 +1,17 @@
+How leaky is your inference API? — Detecting model-weight steganographic exfiltration
+Copyright 2026 Mateusz Kowalczyk, Inés Ortega-Fernández, Keri Warr
+
+Authors and affiliations:
+  Mateusz Kowalczyk      — NASK National Research Institute; MATS Research
+  Inés Ortega-Fernández  — MATS Research
+  Keri Warr              — Anthropic
+
+This work builds on the inference-verification method of Rinberg, Karvonen,
+Hoover, Reuter & Warr, "Verifying LLM Inference to Detect Model Weight
+Exfiltration" (arXiv:2511.02620). The anytime-valid aggregate detector is
+described in Ortega-Fernández, Kowalczyk & Warr, "Anytime-valid detection of
+LLM weight exfiltration" (arXiv:2610.11843).
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+these files except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0

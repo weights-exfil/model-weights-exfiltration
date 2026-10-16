@@ -1,0 +1,655 @@
+/* ==========================================================================
+   Public write-up — page styles
+   Set once; after this, editing the post means editing index.md only.
+
+   Theme handling covers all three viewer states:
+   - bare :root                       -> complete light palette
+   - prefers-color-scheme: dark       -> dark tokens, unless light was chosen
+   - [data-theme="dark"|"light"]      -> explicit choice wins either way
+   Every colour is a token. No colour is defined only inside a media block.
+   ========================================================================== */
+
+:root {
+  /* neutrals: cool paper, biased very slightly toward the teal accent */
+  --bg:            #f6f7f8;
+  --surface:       #ffffff;
+  --surface-sunk:  #eef1f2;
+  --ink:           #191e22;
+  --ink-soft:      #3a444c;
+  --muted:         #5a6670;
+  --rule:          #dce1e4;
+
+  /* Accent and semantics. Every value below is validated, not chosen by eye —
+     `dataviz/scripts/validate_palette.js`, all-pairs, both modes. Two rules the
+     validator enforced and that must survive any future edit:
+       · marks and TEXT are separate tokens. Amber at #eda100 is a legal fill
+         (2.11:1, discharged by its adjacent label) and an illegal text colour
+         (2.17:1) — hence --silent-mark vs --silent.
+       · the channel hue and the blocked/compromised hue must stay far apart.
+         Warm-on-warm collapses: an orange accent scored ΔE 10.8 against the red
+         under normal vision, below the hard floor of 15. Blue scores 31.6. */
+
+  /* accent — the open channel */
+  --accent:        #2a78d6;   /* marks: 4.42:1 on surface */
+  --accent-ink:    #1c5cab;   /* text/links: 6.63:1 */
+  --accent-soft:   #dbe9fb;
+
+  /* compromised / blocked */
+  --caught:        #d03b3b;   /* marks */
+  --caught-ink:    #d03b3b;   /* text: 4.80:1 */
+  --caught-soft:   #fbe4e4;
+
+  /* the verifier / honest side — CVD-safe teal-green, bluer than forest green */
+  --ok:            #0d7357;   /* text/marks: ~4.9:1 on surface */
+  --ok-soft:       #dcf0e8;
+
+  /* the asset, and "modeled" chips */
+  --silent:        #8a6100;   /* text: 5.54:1 */
+  --silent-mark:   #eda100;   /* fill only — never text on light */
+  --silent-soft:   #fdf1d8;
+
+  --measured:      #0f6b4f;
+  --measured-soft: #e2f0ea;
+
+  --font-body: "Iowan Old Style", "Charter", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-ui:   system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* type scale */
+  --t-xs:  0.75rem;
+  --t-sm:  0.875rem;
+  --t-base: 1.0625rem;
+  --t-lg:  1.375rem;
+  --t-xl:  1.75rem;
+  --t-2xl: 2.375rem;
+
+  --measure: 66ch;
+  --rail: 8.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:            #121619;
+    --surface:       #191e22;
+    --surface-sunk:  #0e1215;
+    --ink:           #e6eaec;
+    --ink-soft:      #c3ccd2;
+    --muted:         #97a3ab;
+    --rule:          #2a3238;
+
+    --accent:        #3987e5;   /* marks: 4.62:1 on the dark surface */
+    --accent-ink:    #86b6ef;   /* text/links: 7.96:1 */
+    --accent-soft:   #16283d;
+
+    --caught:        #d03b3b;   /* marks — held across modes, so the trio passes */
+    --caught-ink:    #e66767;   /* text: 5.20:1 (#d03b3b is only 3.50 here) */
+    --caught-soft:   #32191a;
+    --ok:            #4fbf95;   /* verifier / honest — lighter teal-green for dark */
+    --ok-soft:       #12291f;
+
+    --silent:        #c98500;   /* text: 5.47:1 */
+    --silent-mark:   #c98500;
+    --silent-soft:   #2e2413;
+
+    --measured:      #4fbf95;
+    --measured-soft: #10281f;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:            #121619;
+  --surface:       #191e22;
+  --surface-sunk:  #0e1215;
+  --ink:           #e6eaec;
+  --ink-soft:      #c3ccd2;
+  --muted:         #97a3ab;
+  --rule:          #2a3238;
+
+  --accent:        #4fb3c4;
+  --accent-ink:    #7fcdd9;
+  --accent-soft:   #16323a;
+
+  --caught:        #e0785c;
+  --caught-soft:   #331a13;
+  --silent:        #d2a03c;
+  --silent-soft:   #2e2413;
+  --measured:      #4fbf95;
+  --measured-soft: #10281f;
+  --ok:            #4fbf95;
+  --ok-soft:       #10281f;
+}
+
+/* --- base ---------------------------------------------------------------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--t-base);
+  line-height: 1.65;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  max-width: calc(var(--measure) + var(--rail) + 4rem);
+  margin: 0 auto;
+  padding: 0 1.25rem 6rem;
+}
+
+/* the reading column, offset to leave room for the margin rail on wide screens */
+.col { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+/* --- masthead ------------------------------------------------------------ */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 2.5rem 0 1.75rem;
+  margin-bottom: 2.5rem;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.9rem;
+}
+h1 {
+  font-size: var(--t-2xl);
+  line-height: 1.15;
+  letter-spacing: -0.018em;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0 0 0.75rem;
+}
+.standfirst {
+  font-size: var(--t-lg);
+  line-height: 1.45;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+  margin: 0 0 1.5rem;
+}
+/* Byline: authors on one line with superscript affiliation markers, then the
+   numbered affiliations below in a smaller size. Names get the ink colour so
+   they read as people rather than metadata; the affiliations stay muted. */
+.byline {
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.byline .authors {
+  margin: 0;
+  color: var(--ink-soft);
+  font-weight: 500;
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  align-items: baseline;
+}
+.byline .authors sup {
+  font-size: 0.65em;
+  font-variant-numeric: normal;
+  color: var(--accent);
+  margin-left: 0.1em;
+}
+.byline .sep { color: var(--rule); }
+.byline .affils {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+}
+.byline .affils sup {
+  font-size: 0.85em;
+  color: var(--accent);
+  margin-right: 0.15em;
+}
+
+/* --- the intro lede -----------------------------------------------------
+   The first thing after the headline is prose, deliberately. A row of big
+   numbers here would read as a product pitch, which is the one register this
+   page cannot afford. The lede runs slightly larger than body text and its
+   job is to get the reader to the threat model. */
+
+.lede {
+  font-size: 1.1875rem;
+  line-height: 1.55;
+}
+.lede > p:first-child::first-line { letter-spacing: -0.005em; }
+
+/* --- the threat model strip ----------------------------------------------
+   Three steps, in order, because the attack genuinely is a sequence: the node
+   holds the asset, the reply looks normal, the receiver decodes. Numbering is
+   information here, not decoration. */
+
+.tm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 1.5rem 0 2rem;
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}
+.tm > div { background: var(--surface); padding: 0.85rem 1rem 0.95rem; }
+.tm .step {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.tm b { font-weight: 650; display: block; margin-bottom: 0.2rem; }
+.tm span.detail { color: var(--muted); }
+
+/* --- three-up cards for the gaps ---------------------------------------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 1.75rem 0;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--caught);
+  border-radius: 0 0 5px 5px;
+  padding: 1rem 1.1rem 1.1rem;
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  line-height: 1.55;
+}
+.card h3 { margin: 0.35rem 0 0.5rem; font-size: 1rem; }
+.card p { margin: 0 0 0.6rem; }
+.card p:last-child { margin-bottom: 0; }
+.card .fix {
+  border-top: 1px solid var(--rule);
+  padding-top: 0.6rem;
+  color: var(--ink-soft);
+}
+.card .fix b { color: var(--measured); font-weight: 650; }
+
+/* --- progressive disclosure ----------------------------------------------
+   The page is short on purpose. Depth lives behind these, so a reader who
+   wants the methodology can get it without the rest having to scroll past. */
+
+details.more {
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: var(--surface);
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+details.more > summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  font-weight: 650;
+  color: var(--accent-ink);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before {
+  content: "+";
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--accent);
+  width: 1ch;
+}
+details.more[open] > summary::before { content: "\2212"; }
+details.more[open] > summary { border-bottom: 1px solid var(--rule); }
+details.more > .more-body {
+  padding: 1rem 1.1rem 0.25rem;
+  font-size: var(--t-sm);
+  font-family: var(--font-ui);
+  line-height: 1.6;
+}
+details.more > .more-body > :last-child { margin-bottom: 1rem; }
+
+/* --- headings ------------------------------------------------------------ */
+
+h2 {
+  font-size: var(--t-xl);
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 3.25rem 0 0.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+h2 .sec-no {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+h3 {
+  font-family: var(--font-ui);
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  margin: 2rem 0 0.5rem;
+}
+p { margin: 0 0 1.1rem; text-wrap: pretty; }
+
+/* --- the margin rail: measured / modeled / bound -------------------------
+   The device that carries the post's rigor discipline. On wide screens the
+   chip sits in the margin beside the claim; on narrow screens it drops
+   inline above it. */
+
+.claim { position: relative; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  margin-bottom: 0.5rem;
+}
+.chip-measured { color: var(--measured); background: var(--measured-soft); }
+.chip-modeled  { color: var(--silent);   background: var(--silent-soft); }
+.chip-bound    { color: var(--accent);   background: var(--accent-soft); }
+.chip-caught   { color: var(--caught);   background: var(--caught-soft); }
+
+@media (min-width: 1080px) {
+  .claim > .chip {
+    position: absolute;
+    left: calc(-1 * var(--rail));
+    width: calc(var(--rail) - 1.5rem);
+    justify-content: flex-start;
+    margin-top: 0.35rem;
+  }
+}
+
+/* --- callouts ------------------------------------------------------------ */
+
+.note {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  padding: 1rem 1.15rem;
+  margin: 1.75rem 0;
+  font-size: var(--t-sm);
+  font-family: var(--font-ui);
+  line-height: 1.6;
+}
+.note > :last-child { margin-bottom: 0; }
+.note-label {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.note-scope { border-left-color: var(--silent); }
+.note-scope .note-label { color: var(--silent); }
+
+/* status line under the masthead */
+.status {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  color: var(--muted);
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0 0 2rem;
+}
+
+/* --- demo embed ---------------------------------------------------------- */
+
+.demo {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+.demo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-sunk);
+}
+.demo-title { font-family: var(--font-ui); font-weight: 650; font-size: var(--t-sm); }
+.demo-meta  { font-family: var(--font-mono); font-size: var(--t-xs); color: var(--muted); }
+.demo-frame {
+  aspect-ratio: 16 / 10;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-sunk);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  text-align: center;
+  padding: 1rem;
+}
+.demo-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* Links under the embed. Always present, whichever source is embedded, so a
+   reader can always reach the demo's own page — and so the embed is never the
+   only way in. */
+.demo-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--rule);
+  background: var(--surface-sunk);
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+}
+
+/* The demo above the fold is the page's thesis, so it gets to break the
+   reading measure and run wider than the prose column. Its height is set in
+   px, not by aspect-ratio: the interface has a fixed vertical structure
+   (two panes over a chart over a scoreboard) that a ratio would crop. */
+.demo-hero {
+  margin: 0 0 2rem;
+  border-width: 2px;
+  border-color: var(--accent);
+}
+.demo-hero .demo-frame {
+  aspect-ratio: auto;
+  height: min(82vh, 820px);
+  min-height: 520px;
+  align-content: center;
+}
+@media (min-width: 1080px) {
+  .demo-hero {
+    width: calc(100% + var(--rail));
+    margin-left: calc(-0.5 * var(--rail));
+  }
+}
+@media (max-width: 899px) {
+  .demo-hero .demo-frame { height: auto; min-height: 0; padding: 1.5rem 1.25rem; }
+}
+
+/* --- figures ------------------------------------------------------------- */
+
+figure {
+  margin: 2.25rem 0;
+}
+figure img { max-width: 100%; height: auto; display: block; border-radius: 4px; }
+.fig-slot {
+  aspect-ratio: 16 / 9;
+  border: 1px dashed var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+figcaption {
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  color: var(--muted);
+  line-height: 1.55;
+  margin-top: 0.7rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--rule);
+}
+
+/* --- tables (results come from _data/results.yml) ------------------------ */
+
+.table-scroll { overflow-x: auto; margin: 1.75rem 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+}
+caption {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 0.6rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+thead th {
+  font-size: var(--t-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--ink-soft);
+}
+tbody tr:last-child td { border-bottom: none; }
+td.num { font-family: var(--font-mono); white-space: nowrap; }
+.verdict { font-family: var(--font-mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.verdict-caught { color: var(--caught); }
+.verdict-silent { color: var(--silent); }
+
+/* --- code / bit patterns ------------------------------------------------- */
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0.08em 0.32em;
+}
+pre {
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+}
+pre code { background: none; border: 0; padding: 0; }
+
+/* --- placeholder blocks (staging only — remove before publishing) -------- */
+
+.todo {
+  border: 1px dashed var(--caught);
+  border-radius: 4px;
+  background: var(--caught-soft);
+  color: var(--ink);
+  padding: 0.9rem 1.1rem;
+  margin: 1.25rem 0;
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  line-height: 1.6;
+}
+.todo-label {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--caught);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.todo p:last-child { margin-bottom: 0; }
+.todo ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+
+/* --- footer / changelog -------------------------------------------------- */
+
+.changelog {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+}
+.changelog ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.changelog li { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.75rem; }
+.changelog time { font-family: var(--font-mono); font-size: var(--t-xs); color: var(--muted); padding-top: 0.15rem; }
+
+footer.page {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
