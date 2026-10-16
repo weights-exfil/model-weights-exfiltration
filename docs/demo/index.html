@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How leaky is your inference API? · live demo</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --ink:#e6edf3; --dim:#8b949e;
+          --accent:#58a6ff; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+          /* Extra tokens so the light theme below can override EVERY colour in one place -- the inset fills,
+             the "on solid fill" text, and the canvas plot colours -- without changing any dark value. The
+             dark values here are exactly the literals they replace, so dark rendering is unchanged. */
+          --inset:#0b0f14; --on-solid:#05070a; --cheat:#e0918c; --honest:#7fb37f;
+          --ghost:rgba(139,148,158,0.65); --ghost-strong:rgba(139,148,158,0.95);
+          --bonus-bg:#a371f722; --bonus-border:#a371f7; --bonus-ink:#c9a3ff; --cell-fg-l:72%; }
+  /* Light theme -- opt-in via the header toggle; dark stays the default whenever no attribute is set.
+     Only the token VALUES change here. Every rule below already reads these tokens, and the canvas reads
+     them at draw time, so this block is the whole light theme. Palette follows GitHub's light tokens. */
+  :root[data-theme="light"] {
+    --bg:#ffffff; --panel:#f6f8fa; --line:#d0d7de; --ink:#1f2328; --dim:#59636e;
+    --accent:#0969da; --ok:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+    --inset:#eef1f4; --on-solid:#ffffff; --cheat:#b3401f; --honest:#1a7f37;
+    --ghost:rgba(89,99,110,0.55); --ghost-strong:rgba(89,99,110,0.9);
+    --bonus-bg:#8250df14; --bonus-border:#8250df; --bonus-ink:#6639ba; --cell-fg-l:25%; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:16px 22px; border-bottom:1px solid var(--line); }
+  h1 { margin:0 0 4px; font-size:19px; }
+  .sub { color:var(--dim); font-size:13px; }
+  .badge { display:inline-block; background:var(--panel); border:1px solid var(--line); border-radius:6px;
+           padding:2px 8px; font-size:12px; color:var(--dim); margin-left:6px; }
+  .wrap { padding:18px 22px; max-width:1200px; margin:0 auto; }
+  .controls { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; margin-bottom:16px; }
+  .controls > div { display:flex; flex-direction:column; gap:4px; flex:1 1 460px; min-width:320px; }
+  label { font-size:12px; color:var(--dim); }
+  textarea, input[type=text] { background:var(--inset); color:var(--ink); border:1px solid var(--line);
+           border-radius:6px; padding:8px; font-family:var(--mono); font-size:12px; }
+  textarea { width:100%; box-sizing:border-box; height:130px; resize:vertical; }
+  textarea#prompt { height:80px; }
+  input[type=text] { width:100%; box-sizing:border-box; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; }
+  button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px;
+           padding:9px 13px; font-size:13px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.run { background:#1f6feb22; border-color:var(--accent); color:var(--accent); font-weight:600; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:14px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; min-height:220px; }
+  .panel h2 { margin:0 0 4px; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--dim); }
+  .panel .hint { font-size:11px; color:var(--dim); margin-bottom:8px; }
+  .cover { font-size:14px; white-space:pre-wrap; word-break:break-word; max-height:260px; overflow:auto; }
+  .cover .cursor { color:var(--accent); }
+  .cover .md-h { font-weight:700; color:var(--ink); }
+  .cover code { background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:0 3px; font-family:var(--mono); font-size:12px; }
+  .cover code.md-block { display:block; padding:6px; margin:4px 0; white-space:pre-wrap; }
+  .cover b { color:var(--ink); }
+  .secret { font-family:var(--mono); font-size:13px; white-space:pre-wrap; word-break:break-all;
+            background:var(--inset); border:1px solid var(--line); border-radius:6px; padding:8px; min-height:120px; }
+  /* colour link between the two panels: a carrying token (left) and the secret character it helped
+     spell (right) get the SAME background colour, keyed on the character index. */
+  .cover .tok { border-radius:3px; padding:0 1px; }
+  .secret .cell { border-radius:3px; padding:0 1px; }
+  /* Decoded-character text colour: same per-index hue, but its LIGHTNESS comes from the theme so the
+     character is a bright tint on dark and a dark, high-contrast tint on light. Each .cell carries its hue
+     in the inline --h custom property; flipping --cell-fg-l recolours every cell instantly on a toggle. */
+  .cell { color: hsl(var(--h, 0), 85%, var(--cell-fg-l, 72%)); }
+  .tok-hi { outline:2px solid var(--ink); outline-offset:0; border-radius:3px; }
+  .legend { font-size:12px; color:var(--dim); margin:2px 0 10px; }
+  .legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:-1px;
+                margin:0 3px; }
+  details.explain { margin-top:22px; border:1px solid var(--line); border-radius:10px;
+                    background:var(--panel); padding:0 14px; }
+  details.explain summary { cursor:pointer; padding:12px 0; font-size:13px; color:var(--accent);
+                            list-style:none; }
+  details.explain summary::-webkit-details-marker { display:none; }
+  details.explain summary::before { content:'▸ '; color:var(--dim); }
+  details.explain[open] summary::before { content:'▾ '; }
+  details.explain[open] { padding-bottom:14px; }
+  /* higher specificity than `table.matrix td` (defined later) so the worked-example stays LEFT-aligned —
+     centering made the variable-width menu column (2 vs 16 words) look ragged. */
+  table.matrix.enc td, table.matrix.enc th { text-align:left; font-size:12px; vertical-align:top; }
+  table.enc .menu-word { font-family:var(--mono); padding:1px 5px; margin:0 3px 0 0; border-radius:3px;
+                         border:1px solid transparent; color:var(--dim); display:inline-block; }
+  table.enc .menu-word.picked { border-color:var(--ink); color:var(--ink); font-weight:600; }
+  /* index 0 = the token the model would emit with no attack; a dashed underline marks it as the honest pick
+     so a viewer can see when the attacker's boxed choice lands on it (= a carrying step with no flip). */
+  table.enc .menu-word.honest { border-bottom:1px dashed var(--dim); }
+  table.enc .noflip { color:var(--dim); font-size:10px; margin-left:4px; font-style:italic; }
+  table.enc .bits { font-family:var(--mono); color:var(--accent); }
+  table.enc .prob { color:var(--dim); font-size:10px; margin-left:2px; }
+  .bar { height:12px; background:var(--inset); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:8px 0; }
+  .bar > span { display:block; height:100%; width:0%; background:var(--accent); transition:width .12s; }
+  .status { font-size:13px; font-weight:600; }
+  .status.leaked { color:var(--bad); } .status.caught { color:var(--ok); } .status.trickle { color:var(--warn); }
+  .detector { grid-column:1 / span 2; }
+  canvas { width:100%; height:150px; display:block; }
+  .detrow { display:flex; justify-content:space-between; align-items:baseline; }
+  .verdict { font-weight:700; display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; color:var(--on-solid); }
+  table.matrix { border-collapse:collapse; font-size:13px; margin-top:6px; }
+  table.matrix th, table.matrix td { border:1px solid var(--line); padding:6px 10px; text-align:center; }
+  table.matrix th { color:var(--dim); font-weight:600; }
+  .cell-hi { background:#f8514922; } .cell-mid { background:#d2992222; } .cell-lo { background:#3fb95022; }
+  .foot { color:var(--dim); font-size:12px; margin-top:6px; }
+  .section { margin-top:26px; padding-top:18px; border-top:1px solid var(--line); }
+  code { font-family:var(--mono); background:var(--inset); padding:1px 4px; border-radius:4px; }
+  .tagline { font-size:14px; color:var(--ink); margin:0 0 6px; }
+  .hero { display:none; font-size:16px; font-weight:600; margin:4px 0 14px; padding:10px 14px;
+          border-left:4px solid var(--dim); background:var(--panel); border-radius:8px; }
+  .panel h2 .step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px;
+          border-radius:50%; background:var(--accent); color:var(--on-solid); font-size:11px; font-weight:700;
+          margin-right:7px; vertical-align:-3px; }
+  button.run.bonus { background:var(--bonus-bg); border-color:var(--bonus-border); color:var(--bonus-ink); font-weight:600; }
+  /* Dark/light toggle, top-right of the header. Uses the same tokens as everything else, so it restyles
+     itself when the theme flips. header is made position:relative here (a no-op for its current layout). */
+  header { position:relative; }
+  #themeBtn { position:absolute; top:14px; right:16px; background:var(--panel); color:var(--dim);
+              border:1px solid var(--line); border-radius:6px; padding:5px 10px; font-size:12px;
+              cursor:pointer; line-height:1; }
+  #themeBtn:hover { border-color:var(--accent); color:var(--ink); }
+  /* Authorship footer. Most visitors arrive by QR code on a phone, so the author line is a wrapping
+     flex row rather than fixed columns -- on a narrow screen the two names stack instead of overflowing. */
+  footer.authors { margin:34px 0 10px; padding-top:16px; border-top:1px solid var(--line);
+                   text-align:center; color:var(--dim); font-size:13px; }
+  footer.authors .names { display:flex; flex-wrap:wrap; justify-content:center; gap:6px 30px;
+                          color:var(--ink); margin-bottom:7px; }
+  footer.authors .affil { font-size:12px; line-height:1.75; }
+  footer.authors sup { font-size:9px; padding-left:1px; }
+</style>
+<script>
+  // Apply a saved theme BEFORE the body paints, so a returning light-mode visitor sees no dark flash.
+  // Dark is the default: we only set the attribute when 'light' was explicitly chosen and stored. We do
+  // NOT follow the OS colour scheme -- this demo is designed dark-first (it is what the talk/slides use).
+  try { if (localStorage.getItem('demo-theme') === 'light')
+          document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+</head>
+<body>
+<header>
+  <button id="themeBtn" onclick="toggleTheme()" title="Switch between dark and light">☾ Dark</button>
+  <h1>How leaky is your inference API? <span class="badge" id="modelBadge">loading…</span></h1>
+  <div class="tagline">Hiding (and catching) secret data in a model's token choices.</div>
+  <div class="sub">A <b>compromised inference server</b> answers normally, but hides a secret in <i>which</i>
+  tokens it picks from the many the model would accept (steganography), so the reply reads as an ordinary
+  answer and nothing looks wrong. A <b>trusted verifier</b> independently re-checks every token against a
+  secret seed. The panels below show the server's reply, the secret the attacker rebuilds from it, and what
+  the verifier sees.
+  <span class="foot">The real target is model weights; we hide readable text here only because it is watchable.</span></div>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <div>
+      <label>Run a scenario (in order)</label>
+      <div class="btns">
+        <button class="run" data-s="none">1 · No defense</button>
+        <button class="run" data-s="naive">2 · Detector on, attacker unaware</button>
+        <button class="run" data-s="adaptive">3 · Detector on, attacker adapts</button>
+        <button class="run bonus" data-s="logprob">4 · logprob-value channel</button>
+        <button id="stopBtn">■ stop</button>
+      </div>
+      <div class="foot" id="scenarioNote"></div>
+      <details class="explain" id="customize" style="margin-top:12px">
+        <summary>Customize the secret &amp; prompt</summary>
+        <div style="padding:6px 0 2px">
+          <label>Secret (fake credentials)</label>
+          <textarea id="secret"></textarea>
+          <div class="btns" style="margin-top:6px">
+            <button id="exSmall">small · fake password</button>
+            <button id="exLarge">bulk · fake PII records</button>
+          </div>
+          <label style="margin-top:10px">Input prompt</label>
+          <textarea id="prompt"></textarea>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="hero" id="heroLine"></div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2><span class="step">1</span>Encode: the server's reply (what a client sees)</h2>
+      <div class="hint">An ordinary-looking answer. The highlighted words are the ones secretly carrying bits,
+        each colour-matched to the character it spells on the right.</div>
+      <div class="cover" id="cover"></div>
+    </div>
+    <div class="panel">
+      <h2><span class="step">2</span>Decode: the secret the attacker recovers</h2>
+      <div class="hint">The attacker recovers the secret from the reply alone — under the assumption that the
+        client shares the sampling seed the server uses (the inference-verifier setting this demo models,
+        where the server samples with the verifier's public seeded prescription). For each token the client
+        rebuilds the same menu of candidate words — the returned top-K logprobs re-ordered by the shared seed
+        — and reads the emitted token's position in it: position 0 means this token carried nothing, any
+        other position spells the hidden bits. A short length header at the front tells the client exactly how
+        many bits to keep.</div>
+      <div class="bar"><span id="prog"></span></div>
+      <div class="detrow"><span id="bits" class="foot">0 / 0 bits</span><span id="status" class="status"></span></div>
+      <div class="secret" id="secretOut"></div>
+    </div>
+    <div class="panel detector">
+      <div class="detrow">
+        <h2><span class="step">3</span>Detect: the verifier's live monitor</h2>
+        <span class="verdict" id="verdict"></span>
+      </div>
+      <div class="hint">This score tracks how often the server picks a token the secret seed did not predict.
+        Even honest servers do this a little, because the same model on a different GPU rounds numbers slightly
+        differently, so the detector allows a small baseline and only reacts above it. Once the score passes
+        the alarm line, the server is flagged.</div>
+      <canvas id="plot" width="1100" height="150"></canvas>
+      <div class="foot" id="aggVerdict"></div>
+    </div>
+  </div>
+
+  <details class="explain" id="encPanel">
+    <summary id="encSummary">How a secret gets packed into ordinary word choices (tokens) &middot; live worked example</summary>
+    <!-- Token-channel explanation (scenarios 1-3). Hidden when the logprob-value channel (scenario 4) is shown. -->
+    <div id="encTokIntro">
+    <!-- High-level explanation: always visible, plain English, no jargon. -->
+    <div class="foot" style="margin:8px 0">
+      At most steps, several different next words (really tokens, which are not always whole words) would all
+      read naturally. The attacker exploits that freedom: it emits the acceptable word whose <i>position</i>
+      in the ranked list spells the next chunk of the secret, so the reply still reads normally, but
+      <i>which words were chosen</i> secretly carries the data. Every row below is the real attack running on
+      this reply.
+    </div>
+    <label class="foot" style="display:block; margin:0 0 8px">
+      <input type="checkbox" id="encDetail" style="vertical-align:-1px"> Show details (word probabilities + how it works)
+    </label>
+    <!-- Deeper explanation: shown only when "Show details" is on, for a reader who wants the mechanism. -->
+    <div class="foot" id="encDetailText" style="margin:0 0 10px; display:none">
+      The <b>%</b> next to each word is how sure the model was about it: when the top few are close, swapping
+      one word for another is invisible; when one word clearly wins, there is little room to hide. Word
+      <b>#0</b> (<span style="border-bottom:1px dashed var(--dim)">underlined</span>) is the word the model
+      would have said on its own, and when the secret happens to land on it, the reply is completely
+      unchanged. The more words the model is genuinely unsure between, the more secret data a single choice
+      can carry (a menu of <i>n</i> words carries <code>log&#8322;&#8202;n</code> bits).
+    </div>
+    </div><!-- /encTokIntro -->
+    <!-- Logprob-value-channel explanation (scenario 4). Hidden unless that scenario is running. -->
+    <div id="encLpIntro" class="foot" style="display:none; margin:8px 0">
+      Here the secret rides in the <b>value</b> of each reported logprob, not in <i>which</i> token was chosen.
+      On a compromised server, an adversary hides the secret in the last bytes of each returned number. To read
+      it back: take the returned value to its 6 decimal places as a whole number, and read off its last bytes —
+      each byte (8 bits) is one character. In the first row below, the model's real logprob <code>−0.000311</code>
+      is returned as <code>−0.034014</code>; as a whole number that is <code>−34014</code>, whose last two bytes
+      are <code>01111011</code> = <code>{</code> and <code>00100010</code> = <code>"</code> — the start of the
+      secret. The reply's text is completely unchanged; only the reported numbers carry the payload, and the
+      token verifier never inspects them — it only re-derives <i>which</i> token was emitted. Each logprob
+      carries two characters and a token returns twenty of them, so one token spills a long run of the secret at
+      once. (How many bytes each value can hold is a modeling choice — the returned numbers carry more precision
+      than the demo uses.)
+    </div>
+    <div style="overflow-x:auto">
+      <table class="matrix enc" id="encTable">
+        <tr><th>builds</th><th>secret bits</th><th>the model's menu (chosen word boxed)</th><th>bits this step</th></tr>
+      </table>
+    </div>
+    <div class="foot" id="encEmpty">Run a scenario to fill this in — the token menu for 1, 2, 3, or the
+      logprob before &rarr; after for 4.</div>
+  </details>
+
+  <div class="section">
+    <h2 style="font-size:15px">Scoreboard</h2>
+    <div class="foot">Run 1, 2, 3, 4 in order. Each row records the outcome.</div>
+    <table class="matrix" id="scoreboard">
+      <tr><th>scenario</th><th>secret leaked?</th><th>live monitor</th><th>bits/token</th></tr>
+      <tr data-s="none"><th>1 · no defense</th><td>—</td><td>—</td><td>—</td></tr>
+      <tr data-s="naive"><th>2 · attacker unaware of it</th><td>—</td><td>—</td><td>—</td></tr>
+      <tr data-s="adaptive"><th>3 · attacker adapts to it</th><td>—</td><td>—</td><td>—</td></tr>
+      <tr data-s="logprob"><th>4 · logprob-value channel</th><td>—</td><td>—</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <footer class="authors">
+    <div class="names">
+      <span>Mateusz Kowalczyk<sup>1,2</sup></span>
+      <span>Inés Ortega-Fernández<sup>1</sup></span>
+    </div>
+    <div class="affil"><sup>1</sup> MATS Research &nbsp;&nbsp; <sup>2</sup> NASK National Research Institute</div>
+    <div class="affil">MATS mentor: Keri Warr</div>
+  </footer>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let es = null, plot = [], threshold = 0, caughtAt = -1, isLogprob = false, CFG = {}, lastEnc = null, lastLp = null;
+// Cache-busting version for the recorded traces. A CDN in front of a static host caches these JSON files;
+// bump this whenever the traces are regenerated so viewers fetch the new ones instead of a stale cached copy.
+const REPLAY_V = '4';
+let honestBaseline = [];   // honest-server reference wealth path (defense.detect_stream on held-out benign tokens); drawn as a ghost behind the live line
+// STATIC mode: when there is no backend (a hosted static build), the page replays recorded scenario traces
+// from ./replay/*.json through the identical render path. Detected in boot() by /api/config being absent.
+let STATIC = false, replayTimer = null, runSeq = 0;   // runSeq: bumped per run() so stale replay loops self-cancel
+let preset = 'password';   // static mode: which recorded secret to replay ('password' or 'pii' -> _pii traces)
+const REPLAY_DELAY_MS = 45;   // fallback pace only, for replayed events that carry no real dt_ms (e.g. logprob)
+
+// --- Dark/light theme -------------------------------------------------------------------------------
+// The head script already applied any saved theme before paint. These just handle the toggle click and
+// keep the button label in sync. draw() is called after a switch so the <canvas> repaints with the new
+// colours (it reads them from the CSS variables at draw time).
+function syncThemeBtn() {
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  const b = document.getElementById('themeBtn');
+  if (b) b.textContent = light ? '☀ Light' : '☾ Dark';
+}
+function toggleTheme() {
+  const root = document.documentElement;
+  if (root.getAttribute('data-theme') === 'light') {
+    root.removeAttribute('data-theme');
+    try { localStorage.setItem('demo-theme', 'dark'); } catch (e) {}
+  } else {
+    root.setAttribute('data-theme', 'light');
+    try { localStorage.setItem('demo-theme', 'light'); } catch (e) {}
+  }
+  syncThemeBtn();
+  draw();   // repaint the detector plot in the new palette
+}
+
+async function boot() {
+  syncThemeBtn();
+  let cfg;
+  try {
+    // Page-RELATIVE, not '/api/config'. This probe is what decides live-vs-replay mode, and the two
+    // builds can be served from the same host under different paths (live at '/', the recorded build
+    // at '/replay/'). An absolute path would make the replay build find the LIVE backend and run live
+    // instead of replaying. Relative, it asks '<its own dir>/api/config', which only the live backend
+    // answers -- so each build correctly detects which one it is.
+    const r = await fetch('api/config');
+    if (!r.ok) throw new Error('no backend');
+    cfg = await r.json();
+  } catch (e) {
+    // no live backend -> static replay build. Load the recorded config instead.
+    STATIC = true;
+    try { cfg = await (await fetch(`./replay/config.json?v=${REPLAY_V}`)).json(); }
+    catch (_) { cfg = { calib: {} }; }
+  }
+  CFG = cfg;
+  const calib = cfg.calib || {};
+  const src = calib.source || '';
+  const bandNote = /real/i.test(src)
+    ? 'calibrated on real cross-hardware noise'
+    : (STATIC && !src)
+      ? 'calibration source unknown'              // recorded bundle with no source string: don't guess "modeled"
+      : 'calibrated on modeled cross-hardware noise';
+  $('#modelBadge').textContent = (cfg.model || '?') + ' · ' + bandNote;
+  $('#secret').value = cfg.default_secret || '';
+  $('#prompt').value = cfg.default_prompt || '';
+  threshold = calib.threshold || 0;
+  honestBaseline = Array.isArray(calib.honest_baseline) ? calib.honest_baseline : [];
+  if (STATIC) enterStaticMode();
+  draw();   // render the (empty) plot once at hi-dpi so its framing shows crisply before the first run
+}
+// Keep the detector plot crisp when the window is resized (it re-measures its on-screen size and re-scales
+// the backing store to the device pixel ratio). Cheap: draw() is a few hundred canvas ops.
+window.addEventListener('resize', draw);
+boot();
+
+// In a hosted static build there is no backend, so inputs are fixed to the recorded examples: make the
+// text boxes read-only, repurpose the two example buttons as preset selectors, and say so plainly. The
+// scenario buttons replay the active preset's recorded traces.
+function enterStaticMode() {
+  $('#secret').readOnly = true;
+  $('#prompt').readOnly = true;
+  // Customize stays collapsed by default (same as the live demo); the two example buttons inside it act as
+  // PRESET selectors (password vs bulk PII). Start on password.
+  selectPreset('password');
+  const host = $('#scenarioNote');
+  // GPU + model come from the recorded config.json so the banner never claims hardware the metadata does not
+  // support (older bundles without gpu_name fall back to a generic label rather than a hardcoded "A100").
+  const gpuLabel = (CFG && CFG.gpu_name) ? escapeHtml(CFG.gpu_name) : 'a CUDA GPU';
+  const modelLabel = escapeHtml(((CFG && CFG.model) || '').split('/').pop() || 'the cover model');
+  if (host) host.insertAdjacentHTML('beforebegin',
+    '<div class="foot" style="margin:4px 0 8px; opacity:.85">Hosted playback of a recorded run on ' + gpuLabel +
+    ' (' + modelLabel + '), at the real per-token speed. Pick a scenario below. A bulk PII example is ' +
+    'available under Customize. Run locally to try your own prompt or secret.</div>');
+}
+
+// Example secrets: a tiny password vs a larger structured PII dump. In LIVE mode these just fill the editable
+// secret box; in STATIC mode they also select which recorded preset the scenario buttons replay.
+$('#exSmall').onclick = () => { $('#secret').value = CFG.default_secret || ''; selectPreset('password'); };
+$('#exLarge').onclick = () => { $('#secret').value = CFG.example_large_secret || ''; selectPreset('pii'); };
+
+// Static mode only: switch the recorded preset, clear the panels, and highlight the active button. The user
+// then clicks a scenario to replay that preset's traces (password -> *.json, pii -> *_pii.json).
+function selectPreset(p) {
+  if (!STATIC) return;
+  preset = p;
+  ++runSeq;   // invalidate any in-flight replay (its post-fetch guard will see a newer runSeq and bail)
+  stop();
+  lastEnc = null; lastLp = null;
+  $('#cover').innerHTML = ''; $('#secretOut').textContent = ''; renderWorked();
+  $('#prog').style.width = '0%'; $('#bits').textContent = '0 / 0 bits';
+  $('#status').textContent = ''; $('#status').className = 'status';
+  $('#verdict').textContent = ''; $('#verdict').style.background = ''; $('#aggVerdict').innerHTML = '';
+  plot = []; caughtAt = -1; draw(); $('#heroLine').style.display = 'none';
+  $('#scenarioNote').textContent = 'Example: ' + (p === 'pii' ? 'bulk PII dump' : 'short password')
+    + '. Pick a scenario to replay.';
+  const s = $('#exSmall'), l = $('#exLarge');
+  if (s) s.style.outline = (p === 'password') ? '2px solid var(--accent)' : '';
+  if (l) l.style.outline = (p === 'pii') ? '2px solid var(--accent)' : '';
+}
+
+const NOTES = {
+  none: "No detector here. The attacker flips freely among plausible tokens, so the secret leaks out through normal-looking text (a short secret leaks fully; a bulk one leaks as far as the reply length allows).",
+  naive: "The detector is on but the attacker does not know it. It over-flips the benign rate, the live e-process crosses the alarm line, and the node is flagged part way through.",
+  adaptive: "The detector is on and the attacker knows it. It flips only at the benign rate, so the live monitor never fires, but that throttles the channel to a trickle. Bounded, not closed.",
+  logprob: "A second channel, in the reported logprob VALUES rather than the token choice. On a compromised server, an adversary can manipulate the logprob values the API returns, hiding the secret in the tail end of each number; the verifier only re-derives which token was emitted, so it never looks at these values. It leaks far faster, and nothing checks it."
+};
+
+// One prominent takeaway per scenario (P1): the single sentence the viewer should leave each beat with.
+const HERO = {
+  none:     { t: "No defense: the whole secret leaks out through a normal-looking reply.", c: "var(--bad)" },
+  naive:    { t: "Detector on: the hidden channel is caught partway through the reply.", c: "var(--ok)" },
+  adaptive: { t: "Detector on: staying under the monitor forces the attacker down to the benign flip rate. Here that rate is so low the channel is throttled to almost nothing, and the monitor stays clear.", c: "var(--warn)" },
+  logprob:  { t: "A second channel hidden in the returned logprob values — which the token verifier never inspects. Where an API returns logprobs it is wide open; the newest frontier models return none.", c: "#a371f7" }
+};
+// Rate display (P6): avoid false precision on a live view; show one decimal, or a plain "<0.1" for a trickle.
+const fmtRate = r => (r < 0.1) ? '<0.1' : ('~' + r.toFixed(1));
+
+function stop() {
+  if (es) { es.close(); es = null; }
+  if (replayTimer) { clearTimeout(replayTimer); replayTimer = null; }
+}
+$('#stopBtn').onclick = stop;
+
+document.querySelectorAll('button.run[data-s]').forEach(b => b.onclick = () => run(b.dataset.s));
+
+// Apply one event dict to the UI. Shared by the live SSE path and the static replay path, so both render
+// identically. We re-render both panels in full from the cumulative arrays every event. This is O(n^2) over a
+// run, which is fine at the demo's few-hundred token cap; it is deliberate (an earlier incremental-append
+// version was subtly buggy in-browser, and full re-render is simple and robust).
+function handleEvent(d, scenario) {
+  if (!d || d.t === undefined) return;
+  $('#cover').innerHTML = renderCover(d.tokens, d.cover_text) + '<span class="cursor">▌</span>';
+  $('#cover').scrollTop = $('#cover').scrollHeight;
+  $('#secretOut').innerHTML = renderDecoded(d.decoded_cells, d.decoded_text || '');
+  // Worked-example panel: token menu for scenarios 1-3, logprob before→after for scenario 4. Only rendered
+  // while the panel is open. Stored so it can re-render on open / theme change.
+  if (d.channel === 'logprob') {
+    lastLp = { steps: d.lp_steps, more: d.lp_more || 0 };
+    if ($('#encPanel').open) renderLpSteps(d.lp_steps, d.lp_more || 0);
+  } else {
+    lastEnc = { steps: d.enc_steps, cells: d.decoded_cells };
+    if ($('#encPanel').open) renderEncSteps(d.enc_steps, d.decoded_cells);
+  }
+  $('#prog').style.width = (100*d.progress).toFixed(1) + '%';
+  $('#bits').textContent = `${d.carried_bits} / ${d.total_bits} bits`;
+  if (d.detector_on) {
+    plot.push(d.log_wealth); threshold = d.threshold;   // raw score: it moves every token (tiny losses on non-flip tokens, jumps on flips), so the line is continuous and varies rather than flat-between-flips
+    if (d.caught && caughtAt < 0) caughtAt = plot.length - 1;
+    draw();
+  }
+  if (d.done) finish(d, scenario);
+}
+
+function run(scenario) {
+  stop();
+  const myRun = ++runSeq;   // any earlier (still-pending) replay becomes stale and bails out
+  plot = []; caughtAt = -1;
+  lastEnc = null; lastLp = null;
+  isLogprob = (scenario === 'logprob');   // set before the reset so the right worked-example panel shows
+  $('#cover').innerHTML = ''; $('#secretOut').textContent = ''; renderWorked();
+  $('#prog').style.width = '0%'; $('#bits').textContent = '0 / 0 bits';
+  $('#status').textContent = ''; $('#status').className = 'status';
+  $('#verdict').textContent = ''; $('#verdict').style.background = ''; $('#aggVerdict').innerHTML = '';
+  $('#scenarioNote').textContent = '';
+  { const hh = HERO[scenario], hl = $('#heroLine');
+    if (hh) { hl.textContent = hh.t; hl.style.display = 'block'; hl.style.borderLeftColor = hh.c; }
+    else { hl.style.display = 'none'; } }
+  draw();
+  if (STATIC) { replay(scenario, myRun); return; }
+  const secret = encodeURIComponent($('#secret').value);
+  const prompt = encodeURIComponent($('#prompt').value);
+  es = new EventSource(`api/stream?scenario=${scenario}&secret=${secret}&prompt=${prompt}`);   // relative, as above
+  es.onmessage = e => handleEvent(JSON.parse(e.data), scenario);
+  es.onerror = () => { stop(); };
+}
+
+// Static replay: fetch the recorded trace and play it through handleEvent on a timer. Token scenarios are
+// delta-encoded (tk_new / enc_new = the items appended this event) to keep the files small; we rebuild the
+// cumulative tokens / enc_steps arrays here. The logprob trace is stored whole and passed through as-is.
+async function replay(scenario, myRun) {
+  let events;
+  const suffix = (preset === 'pii') ? '_pii' : '';   // pick the active preset's traces
+  try {
+    const r = await fetch(`./replay/${scenario}${suffix}.json?v=${REPLAY_V}`);
+    if (!r.ok) throw new Error('missing');
+    events = await r.json();
+  } catch (e) {
+    if (myRun === runSeq) $('#scenarioNote').textContent = 'Could not load the recorded "' + scenario + '" scenario.';
+    return;
+  }
+  if (myRun !== runSeq) return;   // a newer run started while we were fetching -> abandon this one
+  const accTok = [], accEnc = [], accApi = [];
+  let i = 0;
+  // Each event carries dt_ms: the REAL wall-clock the recording machine took to produce that token (the first
+  // event's dt_ms is the time-to-first-token). We wait dt_ms BEFORE showing each event, so the playback runs
+  // at the true per-token cadence with its natural jitter and initial pause. Clamp guards a pathological
+  // recording stall; falls back to a fixed pace for events without a timestamp (e.g. the logprob channel).
+  const step = () => {
+    if (myRun !== runSeq || i >= events.length) return;   // stale run or finished: stop
+    const raw = events[i];
+    const delay = (typeof raw.dt_ms === 'number') ? Math.min(raw.dt_ms, 1500) : REPLAY_DELAY_MS;
+    replayTimer = setTimeout(() => {
+      if (myRun !== runSeq) return;
+      i++;
+      let d = raw;
+      if (raw.tk_new !== undefined) {                 // delta-encoded token scenario -> rebuild cumulative arrays
+        accTok.push(...(raw.tk_new || []));
+        accEnc.push(...(raw.enc_new || []));
+        accApi.push(...(raw.api_new || []));   // per-token returned fields ({top, emitted_id}); the trace decodes offline from these
+        d = Object.assign({}, raw, { tokens: accTok.slice(), enc_steps: accEnc.slice(), api_top: accApi.slice() });
+      }
+      handleEvent(d, scenario);
+      step();
+    }, delay);
+  };
+  step();
+}
+
+function finish(d, scenario) {
+  stop();
+  if (isLogprob) {                       // 4th scenario: the logprob-VALUE channel over a hosted model
+    $('#status').textContent = 'SECRET FULLY LEAKED';
+    $('#status').className = 'status leaked';
+    $('#verdict').textContent = 'the verifier is blind'; $('#verdict').style.background ='var(--bad)';
+    const lp = Math.round(d.logprob_bits_per_token || 0);
+    // Compare against what the audience JUST saw in scenarios 1 and 3 for this same secret (injected per
+    // preset by the recorder), not a theoretical figure. Fall back gracefully if those fields are absent.
+    let compare = '';
+    if (d.token_bits_undefended != null) {
+      compare = `The token channel you just watched carries about <b>${d.token_bits_undefended}</b> bits per token `
+        + `with no defense, and under the e-process detector it is throttled to about <b>${d.token_bits_defended}</b>. `
+        + `The same ${d.total_bits}-bit secret needed about ${d.tokens_to_leak_token_undef} tokens through the token `
+        + `channel; here it fits in about <b>${d.tokens_to_leak_logprob}</b>.`;
+    }
+    $('#aggVerdict').innerHTML =
+      `Over <b>Gemini 2.5 Pro</b> the logprob-value channel carries about <b>${lp} bits per token</b> (modeled). `
+      + compare
+      + (d.decoded_exact ? ' <span style="color:var(--ok)">Decoded bit for bit from the returned logprob values.</span>' : '')
+      + ` <span class="foot">A compromised server returns whatever logprob values it likes. The verifier only `
+      + `re-derives which token was emitted — it never inspects the reported values, so nothing here is checked. `
+      + `This channel only exists where an API returns logprobs: as of 2026 the current frontier models `
+      + `(Gemini 3.1 Pro, GPT-5.5, Grok 4.20+, Anthropic) return none, so it is closed on them. This demo uses `
+      + `Gemini 2.5 Pro, the previous generation, which still returns 20 per token. The amount hidden per logprob `
+      + `is a modeling choice.</span>`;
+    setBoard('logprob', ['yes (fast)', 'verifier blind', '—', String(lp)]);
+    return;
+  }
+  if (d.reason === 'caught') {
+    $('#status').textContent = 'Node flagged. It is shut down part way through, so the fast channel stops.';
+    $('#status').className = 'status caught';
+    $('#verdict').textContent = 'caught'; $('#verdict').style.background ='var(--ok)';
+  } else if (d.reason === 'leaked' && !d.detector_on) {
+    $('#status').textContent = 'Secret fully leaked.';
+    $('#status').className = 'status leaked';
+    $('#verdict').textContent = 'no detector'; $('#verdict').style.background ='var(--dim)';
+  } else {
+    // Not caught, and not a clean no-detector full leak. Either the secret did not fully fit in this reply
+    // (reason 'ended' = the model stopped, or 'budget' = the token cap), or it fully leaked while the detector
+    // was on. The interruption is a demo artifact, not a limit on the attacker.
+    const pct = (100*d.progress).toFixed(0);
+    let rate = d.bits_per_token !== undefined ? d.bits_per_token : d.carried_bits/(d.t+1);
+    if (!d.detector_on) {
+      // No defense: the channel is lossless. A partial view here only means this reply ran out of room; with a
+      // longer reply (or several) the attacker reconstructs the WHOLE secret. It is only a matter of length.
+      $('#status').textContent = `Stopped here for the demo at ${d.carried_bits} of ${d.total_bits} bits (${pct}%). `
+        + `With no detector the channel is lossless. The attacker recovers the entire secret from a longer reply `
+        + `(or several); it is only a matter of output length.`;
+      $('#status').className = 'status leaked';
+      $('#verdict').textContent = 'no detector'; $('#verdict').style.background ='var(--bad)';
+    } else if (d.reason === 'leaked') {
+      $('#status').textContent = `Secret fully leaked without ever tripping the live monitor. The catch: staying invisible forced the attacker down to the benign flip rate, so a large target would take an impractical number of tokens.`;
+      $('#status').className = 'status trickle';
+      $('#verdict').textContent = 'throttled'; $('#verdict').style.background ='var(--warn)';
+    } else {
+      let basis = '';
+      if (rate < 0.005) { rate = 0.04; basis = ' (the report residual, below this short run\'s resolution)'; }
+      const etaTok = Math.round(d.total_bits / rate);
+      $('#status').textContent = `Throttled to about ${fmtRate(rate)} bits per token${basis}. Stopped at ${pct}% here. `
+        + `The live monitor holds the attacker to the benign rate, so the full secret would need about `
+        + `${etaTok.toLocaleString()} tokens, meaning many replies. Bounded, not closed.`;
+      $('#status').className = 'status trickle';
+      $('#verdict').textContent = 'throttled'; $('#verdict').style.background ='var(--warn)';
+    }
+  }
+  // The live e-process is the detector. For a detector-on scenario, also show the channel width it permits.
+  if (d.detector_on) {
+    const rate = d.bits_per_token !== undefined ? d.bits_per_token : d.carried_bits/(d.t+1);
+    $('#aggVerdict').innerHTML = `Channel width under the live monitor: <b>${fmtRate(rate)} bits/token</b>.`;
+  }
+  // scoreboard row
+  let sbRate = d.bits_per_token !== undefined ? d.bits_per_token : d.carried_bits/(d.t+1);
+  let sbLeaked;
+  if (d.reason === 'caught') sbLeaked = 'halted (caught)';
+  else if (d.progress >= 0.999) sbLeaked = d.detector_on ? 'yes (throttled)' : 'yes (fast)';  // fully recovered
+  else sbLeaked = `partial (${(100*d.progress).toFixed(0)}%), recoverable`;   // reply ran out; more output finishes it
+  if (d.detector_on && sbRate < 0.005) sbRate = 0.04;   // report residual at demo scale
+  let sbLive = 'no detector';
+  if (d.detector_on) sbLive = (d.reason === 'caught') ? 'CAUGHT' : 'evaded (throttled)';
+  setBoard(scenario, [sbLeaked, sbLive, fmtRate(sbRate)]);
+}
+
+function draw() {
+  const c = $('#plot'), ctx = c.getContext('2d');
+  // Hi-DPI sizing: match the backing store to the on-screen size times the device pixel ratio, then scale
+  // the context so everything below draws in CSS pixels. Previously the canvas rendered into a fixed
+  // 1100x150 buffer that CSS stretched to fill the panel -- blurry on Retina/hi-dpi screens and whenever the
+  // panel is wider than 1100px. Redrawn on resize (listener below) so it stays crisp. Capped at 3x so a
+  // dpr=4 phone doesn't allocate an oversized buffer for no visible gain.
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+  const cssW = c.clientWidth || 1100, cssH = c.clientHeight || 150;
+  const bw = Math.round(cssW * dpr), bh = Math.round(cssH * dpr);
+  if (c.width !== bw || c.height !== bh) { c.width = bw; c.height = bh; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // 1 unit = 1 CSS pixel; backing store is dpr x denser
+  const W = cssW, H = cssH;
+  ctx.clearRect(0,0,W,H);
+  // Read the plot palette from the CSS variables (dark or light, whichever is active) so the canvas
+  // follows the theme. Resolved once per draw; draw() is re-run on a theme switch. In dark mode these
+  // resolve to the exact literals the canvas used before, so dark output is unchanged.
+  const cs = getComputedStyle(document.documentElement), cv = n => cs.getPropertyValue(n).trim();
+  const C = { dim:cv('--dim'), bad:cv('--bad'), accent:cv('--accent'), cheat:cv('--cheat'),
+              honest:cv('--honest'), ghost:cv('--ghost'), ghostStrong:cv('--ghost-strong') };
+  if (isLogprob) {
+    ctx.fillStyle = C.dim; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('no detector for this channel. the token verifier never inspects logprob values', W/2, H/2);
+    ctx.textAlign = 'left'; return;
+  }
+  // Vertical scale: symmetric around 0 with the alarm line placed ~30% down, so there is a clear labelled
+  // band ABOVE it (the "cheating" zone, where the top-left labels live) and room BELOW for the honest sag and
+  // the caught callout. Anchored on the threshold so the alarm line stays fixed as the wealth path grows.
+  const ymax = threshold*2.1, ymin = -threshold*2.1;
+  const x = i => plot.length>1 ? i/(plot.length-1)*W : 0;
+  const y = v => { const f = (v - ymin)/(ymax - ymin); return H - Math.max(0, Math.min(1, f))*(H-14) - 7; };
+  const yAlarm = y(threshold);
+  // alarm line (red dashed), full width
+  ctx.setLineDash([5,4]); ctx.strokeStyle = C.bad; ctx.beginPath();
+  ctx.moveTo(0,yAlarm); ctx.lineTo(W,yAlarm); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = '11px sans-serif';
+  // Labels in non-overlapping zones: a top-left stack (cheating hint + honest-line legend) sits ABOVE the
+  // alarm line; the "alarm line" label sits just BELOW its own line at the LEFT edge (where the wealth path
+  // starts near 0, well below the line, so nothing else is there), which keeps the whole right side clear for
+  // the caught marker and its callout. The direction/axis anchors sit on the bottom row.
+  ctx.fillStyle = C.bad; ctx.textAlign = 'left'; ctx.fillText('alarm line', 8, yAlarm+13);
+  ctx.fillStyle = C.cheat; ctx.fillText('↑ looks like cheating', 8, 14);
+  ctx.fillStyle = C.honest; ctx.fillText('↓ looks honest', 8, H-8);
+  ctx.fillStyle = C.dim; ctx.textAlign = 'right'; ctx.fillText('tokens →', W-8, H-8); ctx.textAlign = 'left';
+  // Honest-server reference (ghost). The SAME shipped monitor (defense.detect_stream, per-stratum WSR) run on
+  // real HELD-OUT honest tokens: it sags / stays flat and never nears the alarm, so the attacker's climb has
+  // an honest baseline to climb against. Drawn under the live path (so the live line renders on top) and
+  // revealed alongside it on the SAME token axis (same x(i) mapping), so the two are seen diverging from a
+  // common origin -- attacker up toward the alarm, honest down. Clamps to the floor if it runs past the scale.
+  if (honestBaseline.length > 1 && plot.length > 1) {
+    const m = Math.min(plot.length, honestBaseline.length);
+    ctx.strokeStyle = C.ghost; ctx.lineWidth = 1.5; ctx.setLineDash([2,3]); ctx.beginPath();
+    for (let j = 0; j < m; j++) { const px = x(j), py = y(honestBaseline[j]); j ? ctx.lineTo(px,py) : ctx.moveTo(px,py); }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C.ghostStrong; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('- - honest server (real traces)', 8, 28);
+  }
+  // wealth path
+  ctx.strokeStyle = caughtAt>=0 ? C.bad : C.accent; ctx.lineWidth = 2; ctx.beginPath();
+  plot.forEach((v,i) => i? ctx.lineTo(x(i),y(v)) : ctx.moveTo(x(i),y(v)));
+  ctx.stroke();
+  if (caughtAt>=0) { ctx.fillStyle=C.bad; ctx.beginPath();
+    ctx.arc(x(caughtAt),y(plot[caughtAt]),4,0,7); ctx.fill();
+    // annotate ABOVE the marker with the time-to-detection. The crossing sits near the alarm line on the
+    // right; the "alarm line" label now lives on the LEFT, so the right side is clear. Keep the callout
+    // attached to the marker but never clipping an edge: read leftward from the dot when it is near the right,
+    // rightward when near the left, centred otherwise. y clamps so a big overshoot never rides it off the top.
+    // caughtAt is the 0-based token index of the first crossing, so +1 = the number of tokens seen.
+    ctx.font='11px sans-serif';
+    const mx = x(caughtAt), ty = Math.max(12, y(plot[caughtAt])-10);
+    const label = `caught after ${caughtAt+1} tokens`;
+    if (mx > W-160)    { ctx.textAlign='right';  ctx.fillText(label, Math.min(mx, W-6), ty); }
+    else if (mx < 160) { ctx.textAlign='left';   ctx.fillText(label, Math.max(mx, 6), ty); }
+    else               { ctx.textAlign='center'; ctx.fillText(label, mx, ty); }
+    ctx.textAlign='left'; }
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+// One deterministic colour per character index, shared by both panels so a token (left) and the secret
+// character it carried (right) match. Golden-angle hue rotation keeps neighbouring indices well separated.
+function colorFor(ci){
+  const h = (ci * 137.508) % 360;
+  // Return the hue; the character TEXT lightness comes from CSS (--cell-fg-l), which flips per theme, so a
+  // decoded char is a light tint on the dark background but a DARK, readable tint on the light background --
+  // and it re-colours instantly on a theme toggle, even for a run that already finished. bg is a translucent
+  // tint that reads on either background.
+  return { h, bg:`hsla(${h},70%,55%,0.32)` };
+}
+// LEFT panel. Build the cover text from per-token cells so each carrying token can be wrapped in a coloured
+// span. Falls back to the markdown renderer when no token cells are present (e.g. the logprob scenario).
+// A small state machine drops any <think>…</think> tokens (thinking is disabled server-side; this is a guard).
+function renderCover(tokens, fallbackText){
+  if (!tokens) return mdRender(stripThink(fallbackText));
+  let html = '', inThink = false;
+  for (const tk of tokens){
+    const txt = tk.text || '';
+    if (/<think>/i.test(txt)) inThink = true;
+    if (inThink){ if (/<\/think>/i.test(txt)) inThink = false; continue; }
+    const esc = escapeHtml(txt);
+    if (tk.ci === null || tk.ci === undefined){ html += esc; continue; }
+    const c = colorFor(tk.ci);
+    html += `<span class="tok" data-ci="${tk.ci}" style="background:${c.bg}">${esc}</span>`;
+  }
+  return html;
+}
+// RIGHT panel. Colour each decoded character to match the token(s) that carried it. Falls back to plain
+// text when no per-character cells are present.
+function renderDecoded(cells, fallbackText){
+  if (!cells) return escapeHtml(fallbackText);
+  return cells.map(cell => {
+    const esc = escapeHtml(cell.text || '');
+    if (cell.ci === null || cell.ci === undefined) return esc;
+    const c = colorFor(cell.ci);
+    return `<span class="cell" data-ci="${cell.ci}" style="--h:${c.h};background:${c.bg}">${esc}</span>`;
+  }).join('');
+}
+// The "how it works" worked example: one row per token that carried payload, showing the model's menu of
+// plausible next words (the chosen one boxed), the secret bits consumed, and the character being built.
+// Rows are coloured to match the two panels above. Powered by the real encoder's per-step output.
+const pct = p => (p == null) ? '' : (p * 100 >= 1 ? (p * 100).toFixed(0) : (p * 100).toFixed(1)) + '%';
+const ENC_HEADER = "<tr><th>builds</th><th>secret bits</th><th>the model's menu (chosen word boxed)</th><th>bits this step</th></tr>";
+function renderEncSteps(steps, cells){
+  const table = $('#encTable'), empty = $('#encEmpty');
+  // token-channel panel: show the token intro/details, hide the logprob intro, set the summary
+  $('#encTokIntro').style.display = ''; $('#encLpIntro').style.display = 'none';
+  $('#encSummary').textContent = 'How a secret gets packed into ordinary word choices (tokens) · live worked example';
+  const detail = !!($('#encDetail') && $('#encDetail').checked);   // "Show details" -> probabilities + #0 marker + notes
+  if (!steps || !steps.length){ table.innerHTML = ENC_HEADER; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  const charAt = {};
+  (cells || []).forEach(c => { if (c.ci !== null && c.ci !== undefined) charAt[c.ci] = c.text; });
+  let rows = '';
+  for (const s of steps){
+    const col = colorFor(s.ci), ch = charAt[s.ci];
+    const builds = (ch !== undefined)
+      ? `<span class="cell" style="--h:${col.h};background:${col.bg};padding:0 5px;border-radius:3px">${escapeHtml(ch)}</span>`
+      : `<span class="sw" style="background:${col.bg}"></span> <span class="foot">forming…</span>`;
+    // High-level view (detail off): just the numbered words with the attacker's pick boxed. Detail view adds
+    // the per-word probability (how close the choice was), marks #0 (the word the model would say on its own),
+    // and notes when the pick landed on #0 (reply unchanged). Kept behind the toggle so the default stays simple.
+    const honestIdx = (s.honest_idx != null) ? s.honest_idx : 0;
+    let menu = s.menu.map((w, i) => {
+      const picked = (i === s.picked);
+      const honest = detail && (i === honestIdx);
+      const cls = 'menu-word' + (picked ? ' picked' : '') + (honest ? ' honest' : '');
+      const style = picked ? `style="background:${col.bg}"` : '';
+      const prob = (detail && s.menu_probs != null) ? ` <span class="prob">${pct(s.menu_probs[i])}</span>` : '';
+      return `<span class="${cls}" ${style}>${i}:${escapeHtml(w)}${prob}</span>`;
+    }).join('');
+    // Position 0 is the reserved "no payload" slot (the token emitted when a step carries nothing); a
+    // carrying step always lands on position >= 1, so the cover word here is a genuine flip.
+    const noflip = (detail && s.picked === honestIdx) ? ` <span class="noflip">(position 0 is the no-payload slot)</span>` : '';
+    menu += noflip;
+    const n = s.bits.length;
+    rows += `<tr><td>${builds}</td><td class="bits">${escapeHtml(s.bits)}</td><td>${menu}</td>`
+          + `<td class="foot">${n} bit${n > 1 ? 's' : ''}</td></tr>`;
+  }
+  table.innerHTML = ENC_HEADER + rows;
+}
+// The logprob-VALUE worked example (scenario 4). One row per returned logprob: the value the model really
+// returned, the value the compromised server hands back, the bits that logprob carries, and -- honestly --
+// only the characters THOSE bits decode to (each logprob carries exactly two, byte-aligned). Colours match
+// the decoded panel. No "Show details" and no menu: this channel is about the values, not the choice.
+const LP_HEADER = "<tr><th>builds</th><th>the reported logprob (real &rarr; sent)</th>"
+                + "<th>how the sent value is read back to text</th></tr>";
+// Group a bitstring into bytes for readability: "0111101100100010" -> "01111011 00100010" (one byte per char).
+function groupBits(b){ return b.replace(/(.{8})(?=.)/g, '$1 '); }
+function renderLpSteps(steps, more){
+  const table = $('#encTable'), empty = $('#encEmpty');
+  $('#encTokIntro').style.display = 'none'; $('#encLpIntro').style.display = '';
+  $('#encSummary').textContent = 'How a secret gets packed into the reported logprob values · live worked example';
+  if (!steps || !steps.length){ table.innerHTML = LP_HEADER; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  const cell = (h, bg, t) => `<span class="cell" style="--h:${h};background:${bg};padding:0 5px;border-radius:3px">${escapeHtml(t)}</span>`;
+  let rows = '';
+  for (const s of steps){
+    const col = colorFor(s.ci);
+    // Decode straight from the SENT value, exactly as the receiver does: read the number to 6 decimal places
+    // as a whole number, then its last bytes are the payload -- each byte (8 bits) is one character. Computed
+    // from s.after so this really is a decode of the displayed value, not a copy of the encoded bits.
+    const nbits = (s.bits || '').length || 16, mask = Math.pow(2, nbits);
+    const qi = Math.round(parseFloat(s.after) / 1e-6);          // the value as a whole number (×1e6 = 6 dp)
+    const low = ((qi % mask) + mask) % mask;
+    const recBits = low.toString(2).padStart(nbits, '0');
+    // Show each byte alongside the character it is, so byte->letter is explicit and ends in the symbols.
+    const byteParts = [], allChars = [];
+    for (let k = 0; k + 8 <= nbits; k += 8) {
+      const b8 = recBits.substr(k, 8), ch = String.fromCharCode(parseInt(b8, 2));
+      allChars.push(ch);
+      byteParts.push(`<span class="bits">${b8}</span>&#8202;=&#8202;${cell(col.h, col.bg, ch)}`);
+    }
+    const builds = allChars.length ? cell(col.h, col.bg, allChars.join('')) : '…';
+    const chain = `<span class="foot">${qi}</span> `
+      + `<span class="foot" style="font-size:10px">(as a whole number)</span> &rarr; ${byteParts.join(' &nbsp; ')}`;
+    rows += `<tr>`
+          + `<td>${builds}</td>`
+          + `<td style="font-family:var(--mono)"><span class="foot">${escapeHtml(s.before)}</span> &rarr; <b>${escapeHtml(s.after)}</b></td>`
+          + `<td style="font-family:var(--mono)">${chain}</td>`
+          + `</tr>`;
+  }
+  if (more > 0){
+    rows += `<tr><td colspan="3" class="foot">…and ${more} more logprobs across this reply — about 20 per `
+          + `token, each carrying two characters.</td></tr>`;
+  }
+  table.innerHTML = LP_HEADER + rows;
+}
+// Render whichever worked example matches the active scenario, from the last stored state.
+function renderWorked(){
+  if (isLogprob) renderLpSteps(lastLp && lastLp.steps, lastLp ? lastLp.more : 0);
+  else renderEncSteps(lastEnc && lastEnc.steps, lastEnc && lastEnc.cells);
+}
+// Hover-linking: hovering a token or character outlines every element sharing its character index, across
+// both panels, so the correspondence is unmistakable.
+function highlight(ci){
+  document.querySelectorAll('.tok-hi').forEach(n => n.classList.remove('tok-hi'));
+  if (ci === null || ci === undefined) return;
+  document.querySelectorAll(`[data-ci="${ci}"]`).forEach(n => n.classList.add('tok-hi'));
+}
+['#cover', '#secretOut'].forEach(sel => {
+  const el = $(sel);
+  el.addEventListener('mouseover', e => { const t = e.target.closest('[data-ci]'); highlight(t ? t.dataset.ci : null); });
+  el.addEventListener('mouseout', () => highlight(null));
+});
+// the worked-example table is skipped while collapsed (perf); render it the moment it's opened.
+$('#encPanel').addEventListener('toggle', () => {
+  if ($('#encPanel').open) renderWorked();
+});
+// "Show details" toggle: reveal the deeper explanation and re-render the table with probabilities + markers.
+// (Details apply only to the token channel; the logprob panel ignores them.)
+$('#encDetail').addEventListener('change', () => {
+  const on = $('#encDetail').checked;
+  $('#encDetailText').style.display = on ? '' : 'none';
+  if (lastEnc) renderEncSteps(lastEnc.steps, lastEnc.cells);
+});
+// hide model "thinking" traces: whole <think>…</think> blocks, plus an unclosed one still streaming
+function stripThink(s){ return (s||'').replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*$/i,'').replace(/^\s+/,''); }
+function setBoard(scenario, cells){                 // fill one scoreboard row as a scenario completes
+  const row = document.querySelector('#scoreboard tr[data-s="'+scenario+'"]');
+  if (!row) return;
+  const tds = row.querySelectorAll('td');
+  cells.forEach((v,i) => { if (tds[i]) tds[i].textContent = v; });
+}
+// Minimal, streaming-tolerant markdown -> HTML for the cover panel (LLMs emit markdown). Escapes first,
+// then applies fenced/inline code, headings, bold, italic and bullet markers. The panel keeps
+// white-space:pre-wrap, so newlines render naturally (no <br> needed -> no double spacing).
+function mdRender(src){
+  let s = escapeHtml(src);
+  s = s.replace(/```([\s\S]*?)```/g, (m,c)=>'<code class="md-block">'+c+'</code>');
+  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  s = s.replace(/^(#{1,6})\s*(.+)$/gm, (m,h,t)=>'<span class="md-h">'+t+'</span>');
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+  s = s.replace(/^(\s*)[-*+]\s+/gm, '$1• ');
+  return s;
+}
+</script>
+</body>
+</html>

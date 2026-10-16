@@ -497,10 +497,13 @@ p { margin: 0 0 1.1rem; text-wrap: pretty; }
   border-color: var(--accent);
 }
 .demo-hero .demo-frame {
+  /* height comes from the same-origin iframe (sized to its content by JS), so the
+     frame just wraps it — no fixed height, no centering, no padding, no blank space. */
   aspect-ratio: auto;
-  height: min(78vh, 600px);
-  min-height: 380px;
-  align-content: stretch;
+  display: block;
+  height: auto;
+  min-height: 0;
+  padding: 0;
 }
 @media (min-width: 1080px) {
   .demo-hero {

@@ -22,7 +22,9 @@ affiliations:
 results_date: "August 2026"
 repo_url: "https://github.com/weights-exfil/model-weights-exfiltration"
 
-demo_embed_url: "https://weights-exfil-inference-verifier-demo.static.hf.space"
+# Embedded same-origin from docs/demo/ so the page can auto-size the iframe to its
+# content (cross-origin can't be measured). The HF Space is the standalone/full-screen link.
+demo_embed_url: "/demo/"
 demo_standalone_url: "https://huggingface.co/spaces/weights-exfil/inference-verifier-demo"
 
 footer_note: "Apache-2.0 · to cite, see CITATION.cff or the companion paper (arXiv:2610.11843)."
@@ -145,21 +147,38 @@ The token-choice channel we measured is narrow. An attacker who stays below the 
 
 
 <script>
-  /* The demo is a wide, multi-pane interface built for a full viewport, so it is only
-     embedded where there is room. On narrow screens the iframe is never created and the
-     link carries the reader to the standalone Space. Without JS, <noscript> does the same. */
+  /* The demo is embedded same-origin from docs/demo/, so the page can read the
+     iframe's own content height and size the frame to it — no blank space, and it
+     grows when a scenario is run. On narrow screens we link out instead of
+     squeezing the multi-pane UI. Without JS, <noscript> carries the link. */
   (function () {
     var slot = document.getElementById('demo-slot');
     if (!slot) return;
-    if (window.innerWidth < 900) {
-      slot.innerHTML = '<p>The demo needs a wider screen than this. ' +
+    if (window.innerWidth < 760) {
+      slot.innerHTML = '<p style="padding:1.5rem">The demo needs a wider screen than this. ' +
         '<a href="{{ page.demo_standalone_url }}">Open it in its own page</a>.</p>';
       return;
     }
     var f = document.createElement('iframe');
-    f.src = '{{ page.demo_embed_url }}';
+    f.src = '{{ page.demo_embed_url | relative_url }}';
     f.title = 'Covert-channel demo: a secret hidden in token choices, versus the detector';
     f.loading = 'eager';
+    f.style.width = '100%';
+    f.style.border = '0';
+    f.style.display = 'block';
+    f.style.height = '300px';   /* placeholder until load, then fit to content */
+    f.addEventListener('load', function () {
+      function fit() {
+        try {
+          var d = f.contentDocument || f.contentWindow.document;
+          var h = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0);
+          if (h) f.style.height = h + 'px';
+        } catch (e) {}
+      }
+      fit();
+      try { new ResizeObserver(fit).observe((f.contentDocument || f.contentWindow.document).documentElement); } catch (e) {}
+      var n = 0, iv = setInterval(function () { fit(); if (++n > 20) clearInterval(iv); }, 300);
+    });
     slot.replaceChildren(f);
   })();
 </script>
