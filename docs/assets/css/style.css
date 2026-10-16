@@ -498,9 +498,9 @@ p { margin: 0 0 1.1rem; text-wrap: pretty; }
 }
 .demo-hero .demo-frame {
   aspect-ratio: auto;
-  height: min(82vh, 820px);
-  min-height: 520px;
-  align-content: center;
+  height: min(78vh, 600px);
+  min-height: 380px;
+  align-content: stretch;
 }
 @media (min-width: 1080px) {
   .demo-hero {

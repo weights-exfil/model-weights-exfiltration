@@ -106,10 +106,6 @@ The demo shows steganographic exfiltration from a compromised inference server a
 Since the exfiltration of model weights is too slow to show in a short demo, we provide a proof of concept focused on smaller secrets like passwords or fake PII records. The input prompt is intentionally open-ended to cause more uncertainty in the token choice.
 
 <div class="demo demo-hero">
-  <div class="demo-head">
-    <span class="demo-title">Run it — a secret leaving in the model's word choices, vs. the detector</span>
-    <span class="demo-meta">interactive, no GPU needed · runs on Hugging Face Spaces</span>
-  </div>
   <div class="demo-frame" id="demo-slot">
     <noscript>The demo runs in its own page: <a href="{{ page.demo_standalone_url }}">open it here</a>.</noscript>
   </div>
