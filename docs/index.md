@@ -29,7 +29,7 @@ repo_url: "https://github.com/weights-exfil/model-weights-exfiltration"
 demo_embed_url: "/demo/"
 demo_standalone_url: "https://huggingface.co/spaces/weights-exfil/inference-verifier-demo"
 
-footer_note: "Apache-2.0 · to cite, see CITATION.cff or the companion paper (arXiv:2610.11843)."
+footer_note: 'Apache-2.0 licensed · source and figures on <a href="https://github.com/weights-exfil/model-weights-exfiltration">GitHub</a> · citation above.'
 changelog:
   - date: "2026-10-16"
     note: "Public draft prepared; demo on Hugging Face Spaces."
@@ -129,6 +129,22 @@ There are two additional challenges that make inference verification harder:
 - Tokens are not the only output. Multimodal outputs such as images, audio and video have far more room to hide data and could serve as high-bandwidth covert channels.
 
 The token-choice channel we measured is narrow. An attacker who stays below the alarm can hide bits only inside the small amount of benign noise. That slows exfiltration of model weights a lot, though it does not stop small secrets such as passwords from leaking [5]. This is why we see inference verification as defense-favored. In most security problems the attacker has the advantage: they need to find one gap, while the defender has to close all of them. That is why filters that look for known patterns, such as regular expressions, are easy to bypass. Inference verification shifts that balance. The defender holds the same weights and can replay a request with the same seed on a trusted server, so instead of guessing what a malicious response looks like, it checks each response against what an honest server would have produced. That check doesn't depend on whether logprobs are returned or how the bits are encoded, so it keeps working as the attack changes.
+
+## Citation
+
+If you use this work, please cite the companion paper:
+
+Ortega-Fernández, I., Kowalczyk, M., & Warr, K. (2026). *Anytime-valid detection of LLM weight exfiltration.* arXiv:[2610.11843](https://arxiv.org/abs/2610.11843).
+
+```bibtex
+@article{ortegafernandez2026anytime,
+  title   = {Anytime-valid detection of {LLM} weight exfiltration},
+  author  = {Ortega-Fern{\'a}ndez, In{\'e}s and Kowalczyk, Mateusz and Warr, Keri},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2610.11843},
+  url     = {https://arxiv.org/abs/2610.11843}
+}
+```
 
 ## References 
 [1] Kaptchuk et al., ”Meteor: Cryptographically Secure Steganography for Realistic Distributions”, ACM CCS 2021  
