@@ -22,7 +22,7 @@
     <p class="standfirst">{{ page.standfirst }}</p>
     <div class="byline">
       <p class="authors">
-        {% for author in page.authors %}<span class="author">{{ author.name }}<sup>{% for i in author.affiliations %}{{ i }}{% unless forloop.last %},{% endunless %}{% endfor %}</sup></span>{% unless forloop.last %}<span class="sep">·</span>{% endunless %}{% endfor %}
+        {% for author in page.authors %}<span class="author">{% if author.url %}<a href="{{ author.url }}" rel="author noopener" target="_blank">{{ author.name }}</a>{% else %}{{ author.name }}{% endif %}<sup>{% for i in author.affiliations %}{{ i }}{% unless forloop.last %},{% endunless %}{% endfor %}</sup></span>{% unless forloop.last %}<span class="sep">·</span>{% endunless %}{% endfor %}
       </p>
       <p class="affils">
         {% for affil in page.affiliations %}<span class="affil"><sup>{{ forloop.index }}</sup>{{ affil }}</span>{% endfor %}

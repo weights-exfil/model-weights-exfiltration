@@ -11,9 +11,11 @@ authors:
   - family-names: Kowalczyk
     given-names: Mateusz
     affiliation: "NASK National Research Institute; MATS Research"
+    website: "https://github.com/Kravty"
   - family-names: Ortega-Fernández
     given-names: Inés
     affiliation: "MATS Research"
+    website: "https://github.com/inesortega"
   - family-names: Warr
     given-names: Keri
     affiliation: "Anthropic"

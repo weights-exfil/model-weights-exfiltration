@@ -10,8 +10,10 @@ standfirst: ""
 authors:
   - name: "Mateusz Kowalczyk"
     affiliations: [1, 2]
+    url: "https://github.com/Kravty"
   - name: "Inés Ortega-Fernández"
     affiliations: [1]
+    url: "https://github.com/inesortega"
   - name: "Keri Warr"
     affiliations: [3]
 affiliations:

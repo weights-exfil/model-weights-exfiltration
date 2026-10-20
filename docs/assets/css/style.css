@@ -204,6 +204,13 @@ h1 {
   margin-left: 0.1em;
 }
 .byline .sep { color: var(--rule); }
+.byline .authors a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 2px;
+}
+.byline .authors a:hover { color: var(--accent); text-decoration-color: currentColor; }
 .byline .affils {
   margin: 0;
   font-size: var(--t-xs);
